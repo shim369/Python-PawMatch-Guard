@@ -1,0 +1,12 @@
+# CPU by default (works without a GPU). Language: PAWMATCH_LANG=en|ja
+services:
+  prepare:
+    build: .
+    command: ["prepare-data"]
+    environment: [PAWMATCH_LANG=${PAWMATCH_LANG:-en}]
+    volumes: ["./data:/app/data"]
+  train:
+    build: .
+    command: ["train", "--config", "configs/classification.yaml"]
+    environment: [PAWMATCH_LANG=${PAWMATCH_LANG:-en}]
+    volumes: ["./data:/app/data", "./runs:/app/runs", "./configs:/app/configs"]
