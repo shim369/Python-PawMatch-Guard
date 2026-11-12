@@ -1,0 +1,12 @@
+seed: 42
+data_root: data
+split_csv: data/splits/oxford_pet_seed42.csv
+output_dir: runs
+image_size: 224
+batch_size: 32
+num_workers: 2
+epochs: 8
+freeze_epochs: 2      # train heads only for the first N epochs
+lr: 0.0003
+loss: ce              # ce | weighted_ce | focal
+sampler: none         # none | weighted
