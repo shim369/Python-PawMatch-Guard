@@ -1,0 +1,12 @@
+batch_size: 32
+data_root: data
+epochs: 8
+freeze_epochs: 2
+image_size: 224
+loss: ce
+lr: 0.0003
+num_workers: 2
+output_dir: runs
+sampler: none
+seed: 42
+split_csv: data/splits/oxford_pet_seed42.csv
