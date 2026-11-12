@@ -1,0 +1,5 @@
+.venv
+data/oxford-iiit-pet
+runs
+.git
+__pycache__
