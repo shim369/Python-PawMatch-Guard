@@ -52,10 +52,10 @@ def run(config_path: Path) -> Path:
     splits = read_split_csv(Path(cfg["split_csv"]))
     bug, size = cfg.get("bug", "none"), cfg["image_size"]
     train_ds = PetSegmentationDataset(splits["train"], root, size, train=True, bug=bug)
-    # Evaluation always uses the bug-free pipeline's mask but the same (possibly buggy) input
-    # preprocessing, so a preprocessing bug shows up as a metric drop.
-    mk = lambda s, **k: PetSegmentationDataset(  # noqa: E731
-        splits[s], root, size, bug=k.get("bug", bug))
+    # ``linear_mask`` corrupts only the *training labels*; evaluation uses the clean masks.
+    # ``bgr`` / ``double_norm`` corrupt the input pipeline, which train and eval share.
+    eval_bug = "none" if bug == "linear_mask" else bug
+    mk = lambda s: PetSegmentationDataset(splits[s], root, size, bug=eval_bug)  # noqa: E731
     val_ds, test_ds = mk("val"), mk("test")
     if cfg.get("max_train"):
         train_ds = Subset(train_ds, range(cfg["max_train"]))

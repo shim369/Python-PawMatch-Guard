@@ -36,3 +36,23 @@ def test_class_weights_favor_rare() -> None:
     entries = [Entry(f"a{i}", 0, 0) for i in range(9)] + [Entry("b", 1, 0)]
     w = class_weights(entries, num_classes=2)
     assert w[1] > w[0] and torch.isclose(w.mean(), torch.tensor(1.0))
+
+
+def test_segmentation_model_can_overfit_two_images() -> None:
+    from src.models.segmentation import build_model
+
+    set_seed(0)
+    model = build_model(pretrained=False)
+    x = torch.randn(2, 3, 64, 64)
+    y = torch.zeros(2, 64, 64, dtype=torch.long)
+    y[:, 16:48, 16:48] = 1
+    opt = torch.optim.Adam(model.parameters(), lr=0.01)
+    model.train()
+    for _ in range(100):
+        loss = nn.functional.cross_entropy(model(x)["out"], y)
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+    # train-mode BN: batch statistics are stable on a 2-image batch, running stats are not
+    pred = model(x)["out"].argmax(1)
+    assert loss.item() < 0.2 and (pred == y).float().mean() > 0.95
