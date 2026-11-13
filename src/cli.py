@@ -48,6 +48,12 @@ def _report(args: argparse.Namespace) -> None:
               f"{m[key]['accuracy']:.4f}, {t('eval.macro_f1', args.lang)}={m[key]['macro_f1']:.4f}")
 
 
+def _noise(args: argparse.Namespace) -> None:
+    from src.quality.noise_experiment import main as run_noise
+
+    run_noise(args.run_dir, args.out)
+
+
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(prog="pawmatch")
     p.add_argument("--lang", choices=SUPPORTED, default=get_lang())
@@ -68,6 +74,11 @@ def main(argv: list[str] | None = None) -> None:
     sp = sub.add_parser("report", help=t("cli.evaluate"))
     sp.add_argument("run_dir")
     sp.set_defaults(fn=_report)
+
+    sp = sub.add_parser("detect-noise", help=t("cli.noise"))
+    sp.add_argument("run_dir")
+    sp.add_argument("--out", default="docs/results/noise_detection.json")
+    sp.set_defaults(fn=_noise)
 
     args = p.parse_args(argv)
     args.fn(args)
