@@ -26,6 +26,8 @@ uv run pawmatch prepare-data          # download dataset (~800 MB) + create data
 uv run pawmatch prepare-data --source hf
 uv run pawmatch train                 # uses configs/classification.yaml
 uv run pawmatch report runs/<run_dir> # print test metrics
+uv run pawmatch train-seg             # segmentation (configs/segmentation.yaml)
+uv run pawmatch detect-noise runs/<run_dir>  # 5% label-noise experiment
 ```
 
 Japanese output: `PAWMATCH_LANG=ja uv run pawmatch train` or `uv run pawmatch --lang ja train`.
@@ -46,7 +48,7 @@ src/data        download, split, preprocessing
 src/models      classifier, training
 src/metrics     from-scratch metrics
 src/i18n        en / ja messages
-src/quality     (Phase 2) noisy-label detection
+src/quality     annotation checks, agreement, noisy-label detection
 src/moderation  (Phase 3) rules, video
 src/api         (Phase 3) FastAPI app
 configs/        experiment YAMLs
@@ -83,10 +85,33 @@ Most frequent confusions: ragdoll→birman (8), newfoundland→leonberger (5), b
 Full per-class metrics and the 37×37 confusion matrix: [`docs/results/phase1_metrics.json`](docs/results/phase1_metrics.json); config: [`docs/results/phase1_config.yaml`](docs/results/phase1_config.yaml).
 Caveats: single run, single seed; validation accuracy plateaued around 0.90 from epoch 4 and was noisy (0.896–0.923), so differences of ~1 point are not meaningful. Imbalance options (weighted CE / sampler / Focal) are implemented but not yet compared.
 
+### Phase 2 (in progress): segmentation, annotation QA
+
+**Segmentation** (DeepLabV3-MobileNetV3, 256 px, 4 epochs, full train split, test = 1,104 images, own metrics):
+
+| IoU | Dice | Boundary IoU |
+|---|---|---|
+| 0.897 | 0.943 | 0.290 |
+
+Boundary IoU is much lower than IoU because the Oxford trimap's "boundary" class is an uncertain band around the fur edge; the metric measures a 3 px contour band at 256 px, so it is a strict edge-quality indicator, not a defect. Config/metrics: [`docs/results/phase2_seg_full_metrics.json`](docs/results/phase2_seg_full_metrics.json).
+
+**Noisy-label detection** (5 % of breed labels swapped on val+test, 2,206 images, 110 noisy; classifier from Phase 1, which never trained on these images):
+
+| Method | Flagged | Caught | Recall | Precision |
+|---|---|---|---|---|
+| Top 5 % by loss of the given label | 110 | 101 | 0.918 | 0.918 |
+| Any prediction ≠ label | 285 | 110 | 1.000 | 0.386 |
+
+The model itself is wrong on 8.5 % of clean labels, which is why "disagree" flags so many. Details: [`docs/results/noise_detection.json`](docs/results/noise_detection.json). Single seed.
+
+**Preprocessing-bug experiments:** see [`docs/debugging.md`](docs/debugging.md). Main finding: three injected bugs moved IoU by only 0.1–1.7 pt (within plausible noise); the mask-resize bug showed up as a 34 % drop in *boundary* IoU.
+
+**Not done yet in Phase 2:** object detection (Faster R-CNN) and the custom face/plate/text annotations in Label Studio, so no mAP is reported yet. The metric code (IoU, AP@0.5, mAP@0.5:0.95, per-class recall) is implemented and matches torchmetrics/pycocotools.
+
 ## Roadmap
 
 1. Classification & evaluation foundation ✅ (code), results below
-2. Segmentation, detection, annotation QA (Label Studio), noisy-label detection, `docs/debugging.md`
+2. Segmentation ✅, annotation QA ✅ (guidelines, checks, noise detection), debugging log ✅; detection model and Label Studio annotation pending
 3. Moderation pipeline, video (ffmpeg), FastAPI app
 4. AWS (S3 → Lambda → ECS, Batch re-evaluation), ONNX + quantization
 
