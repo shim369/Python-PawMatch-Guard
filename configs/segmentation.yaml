@@ -1,0 +1,11 @@
+seed: 42
+data_root: data
+split_csv: data/splits/oxford_pet_seed42.csv
+output_dir: runs
+image_size: 256
+batch_size: 16
+num_workers: 2
+epochs: 4
+lr: 0.0005
+bug: none          # none | bgr | linear_mask | double_norm  (see docs/debugging.md)
+max_train: null    # limit training images (used for quick bug-comparison runs)
