@@ -1,0 +1,10 @@
+{
+  "setup": "DeepLabV3-MobileNetV3, 256px, 800 train images, 2 epochs, seed 42, test split 1104 images, single run each",
+  "runs": {
+    "none":                       {"iou": 0.8307, "dice": 0.9025, "boundary_iou": 0.1674},
+    "bgr":                        {"iou": 0.8134, "dice": 0.8905, "boundary_iou": 0.1626},
+    "double_norm":                {"iou": 0.8237, "dice": 0.8977, "boundary_iou": 0.1620},
+    "linear_mask_train_labels":   {"iou": 0.8294, "dice": 0.9019, "boundary_iou": 0.1654},
+    "linear_mask_also_eval_gt":   {"iou": 0.8170, "dice": 0.8943, "boundary_iou": 0.1111}
+  }
+}
