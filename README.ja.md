@@ -35,6 +35,8 @@ uv run pawmatch serve                 # デモ用Webアプリ(認証なし)
 
 日本語で出力: `PAWMATCH_LANG=ja uv run pawmatch train` または `uv run pawmatch --lang ja train`
 
+AWSのコード経路をローカルで(S3 → SeaweedFS、DynamoDB → DynamoDB Local): `docker compose --profile aws-local up`
+
 Docker(CPUのみ、GPU不要):
 
 ```bash
@@ -56,7 +58,7 @@ src/moderation  審査ルール、ぼかし、動画(ffmpeg)、パイプライ�
 src/api         FastAPIアプリ(投稿・検索・確認キュー)
 configs/        実験設定YAML
 docs/           デバッグ記録、アノテーションガイドライン
-infra/          (フェーズ4) AWS
+infra/          Terraform(S3、Lambda、DynamoDB、ECR、Budgets)。未適用
 ```
 
 ## 審査ルール(`src/moderation/rules.py` に実装済み)
@@ -165,12 +167,35 @@ F1が低い品種: staffordshire_bull_terrier 0.71、beagle 0.79、american_pit_
 
 未実施: 検出器(Faster R-CNN)とセグメンテーションのONNX化、AWSインフラ。生データ: [`docs/results/onnx_benchmark.json`](docs/results/onnx_benchmark.json)。再現: `uv run pawmatch benchmark runs/<分類器のrun>`
 
+### フェーズ4(一部): AWS設計とコスト
+
+設計(詳細と図: [`docs/architecture.md`](docs/architecture.md)、コード: [`infra/terraform`](infra/terraform)、[`src/aws_lambda.py`](src/aws_lambda.py)): S3へのアップロード → **コンテナLambda1つ**が審査 → 結果を**DynamoDB**へ。モデル更新後は、運用者が同じLambdaを `{"action": "reevaluate"}` で呼び、公開中の投稿を20件ずつ再確認します(自分自身を呼び直して続行)。再評価は判定を厳しくする方向にしか変えず、人が判断した投稿には触れません。
+
+**コスト。** *AWSには何もデプロイしておらず、AWSの費用は発生していません。自分で `terraform apply` しない限り、このリポジトリがAWSリソースを作ることはありません。* 無料枠に収まるよう設計を変更しました。ECS/FargateとBatchは廃止(Fargateの無料枠は見つからず、Batch自体は下のFargate/EC2の料金が加わるだけ)、DynamoDBはプロビジョンド(オンデマンドは無料の容量単位がない)、AWS Budgetsの警告も追加しています。以下の条件はAWSのページと第三者の解説によるもので、デプロイ前に必ず再確認してください。
+
+| サービス | 用途 | 無料枠 | 想定コスト |
+|---|---|---|---|
+| Lambda | 審査・再評価 | 常時無料: 月100万リクエスト、40万GB秒 | ポートフォリオ規模なら0円(下の測定値参照) |
+| DynamoDB | 投稿 | 常時無料: 25GB、プロビジョンド25 WCU/RCU | 0円(25のうち10+10を使用) |
+| S3 | アップロード、出力、重み | 無料枠はアカウント種別による。**未確認** | 数円以下 |
+| CloudWatch Logs | 保持7日 | 無料枠は**未確認** | 数円以下 |
+| ECR | Lambdaイメージ1つ、圧縮後約0.6GB | 新規は500MBを最初の12か月のみ無料 | **無料ではない**: 月およそ$0.01〜0.07 |
+| AWS Budgets | 月$1の警告 | 最初の予算は無料 | 0円 |
+
+したがって正直な答えは「ほぼ0円だが、ぴったり0円ではない」です。無料枠の対象外になるのはECRのコンテナイメージだけです(Lambdaのコンテナイメージには ECR が必須で、PyTorch は zip パッケージに収まりません)。
+
+ローカルでの測定(Lambdaランタイムエミュレーター、Apple M1上のDocker、arm64イメージ。AWS上では**未測定**): S3から重みを取得するコールドスタートは2件で約11.4秒、ウォームは1件あたり約0.26秒、S3イベントの重複は約30ms。メモリ3GBでは、40万GB秒は「毎回コールドスタート」なら月約1万件程度、ウォームならはるかに多い規模です。実際の数字はデプロイして測る必要があります。
+
+確認済み: `terraform validate` と `fmt` が通る(構文とスキーマのみの確認で、`apply` の成功やIAMの十分性は確認していません)。Lambdaイメージがビルドでき(1.78GB、CPU専用PyTorch)、Lambdaランタイムエミュレーター経由で、S3互換ストアから重みを取得し、投稿を審査してDynamoDB Localに書き込む。Webアプリが、SeaweedFS+DynamoDB Localで一連の流れを実行する。ストアはmotoで契約テスト済み。**未確認:** 実際の `terraform apply`、S3 → Lambdaのイベント連携、Lambdaの自己呼び出し(偽のクライアントによる単体テストのみ)、AWS上の実際の性能。
+
+既知の不足: Lambdaイメージに `ffmpeg` が無いため、**AWSでは動画の投稿が `error` になります**(ローカルとDockerイメージでは動作)。FastAPIアプリはTerraformの対象外です。ONNX化は分類器のみで(MacではONNX RuntimeがPyTorchより遅かった。上記参照)、LambdaはPyTorchを使います。
+
 ## ロードマップ
 
 1. 分類と評価の土台 ✅(コード完了、結果は下記)
 2. セグメンテーション ✅、アノテーション品質管理 ✅(ガイドライン、チェック、ノイズ検出)、デバッグ記録 ✅。動物の頭部検出 ✅。顔・ナンバー・文字のLabel Studioアノテーションは未実施
 3. 審査パイプライン ✅、FastAPIアプリ ✅。動画のフレーム抽出はDocker内で合成クリップのみ確認、ネガティブ画像での評価は未実施
-4. AWS(S3 → Lambda → ECS、Batchで一括再評価)、ONNX化と量子化
+4. ONNX化と量子化 ✅(分類器)。AWS: 無料枠に収まる設計を作成し、検証とローカルでの動作確認まで実施。**デプロイはしていません**(S3 → Lambda → DynamoDB、再評価は自己連鎖するLambda)
 
 ## データとライセンス
 

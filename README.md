@@ -35,6 +35,8 @@ uv run pawmatch serve                 # demo web app (no authentication)
 
 Japanese output: `PAWMATCH_LANG=ja uv run pawmatch train` or `uv run pawmatch --lang ja train`.
 
+The AWS code path locally (S3 → SeaweedFS, DynamoDB → DynamoDB Local): `docker compose --profile aws-local up`.
+
 With Docker (CPU, no GPU needed):
 
 ```bash
@@ -56,7 +58,7 @@ src/moderation  rules, blur, video (ffmpeg), pipeline, evaluation
 src/api         FastAPI app (posts, search, review queue)
 configs/        experiment YAMLs
 docs/           debugging log, annotation guidelines
-infra/          (Phase 4) AWS
+infra/          Terraform (S3, Lambda, DynamoDB, ECR, Budgets); not applied
 ```
 
 ## Moderation rules (implemented in `src/moderation/rules.py`)
@@ -165,12 +167,35 @@ What the table shows (single machine, one run, n=400 so accuracy has roughly ±1
 
 Not done: ONNX export of the detector (Faster R-CNN) and segmentation model; AWS infrastructure. Raw numbers: [`docs/results/onnx_benchmark.json`](docs/results/onnx_benchmark.json). Reproduce: `uv run pawmatch benchmark runs/<classifier_run>`.
 
+### Phase 4 (partial): AWS design and cost
+
+Design (details and diagram: [`docs/architecture.md`](docs/architecture.md); code: [`infra/terraform`](infra/terraform), [`src/aws_lambda.py`](src/aws_lambda.py)): S3 upload → **one container Lambda** moderates the post → result in **DynamoDB**; after a model update an operator invokes the same Lambda with `{"action": "reevaluate"}`, which re-checks live posts 20 at a time and chains itself. Re-evaluation only ever tightens a verdict and never touches posts a person decided.
+
+**Cost.** *Nothing has been deployed to AWS and no AWS cost has been incurred; nothing in this repo creates AWS resources unless you run `terraform apply` yourself.* The design was changed to stay inside the free tier: ECS/Fargate and Batch were dropped (Fargate has no free tier I could find; Batch only adds Fargate/EC2 charges), DynamoDB uses provisioned capacity (on-demand tables get no free capacity units), and an AWS Budgets alert is included. Terms below come from AWS's pages and third-party guides and must be re-checked before deploying.
+
+| Service | Use | Free tier | Expected cost |
+|---|---|---|---|
+| Lambda | moderation + re-evaluation | always free: 1M requests, 400,000 GB-s / month | $0 at portfolio traffic (see timings) |
+| DynamoDB | posts | always free: 25 GB, 25 provisioned WCU/RCU | $0 (uses 10 + 10 of 25) |
+| S3 | uploads, outputs, weights | free allowance depends on account type; **not verified** | cents or less |
+| CloudWatch Logs | 7-day retention | allowance **not verified** | cents or less |
+| ECR | one Lambda image, ≈0.6 GB compressed | 500 MB free for the first 12 months only | **not free**: ≈ $0.01–0.07 / month |
+| AWS Budgets | $1 monthly alert | first budgets free | $0 |
+
+So the honest answer is "about zero, not exactly zero": the container image in ECR is the one item that is not covered (ECR is required for Lambda container images, and PyTorch does not fit a zip package).
+
+Measured locally (Lambda runtime emulator, Docker on Apple M1, arm64 image; **not** measured on AWS): cold start with weight download from S3 ≈ 11.4 s for 2 posts; warm ≈ 0.26 s per post; a duplicate S3 event ≈ 30 ms. At 3 GB, 400,000 GB-s is on the order of 10,000 posts/month if every post were a cold start and far more when warm; real numbers need a deployment to measure.
+
+Verified: `terraform validate` and `fmt` pass (this checks syntax and schema only, not that `apply` would succeed or that IAM is sufficient); the Lambda image builds (1.78 GB, CPU-only PyTorch), loads weights from an S3-compatible store, moderates posts and writes to DynamoDB Local when invoked through the Lambda runtime emulator; the web app runs the full flow against SeaweedFS + DynamoDB Local; stores are contract-tested against moto. **Not verified:** a real `terraform apply`, the S3 → Lambda event wiring, the Lambda's self-invocation (unit-tested with a fake client only), and real AWS performance.
+
+Known gaps: the Lambda image has no `ffmpeg`, so **video posts would end in `error` on AWS** (they work locally and in the Docker image); the FastAPI app is not part of the Terraform stack; ONNX export is done for the classifier only (and ONNX Runtime was slower than PyTorch on the Mac, see above), so the Lambda uses PyTorch.
+
 ## Roadmap
 
 1. Classification & evaluation foundation ✅ (code), results below
 2. Segmentation ✅, annotation QA ✅ (guidelines, checks, noise detection), debugging log ✅; animal-head detector ✅; Label Studio annotation of face/plate/text pending
 3. Moderation pipeline ✅, FastAPI app ✅, video frame extraction verified in Docker on a synthetic clip only; negative-photo evaluation pending
-4. AWS (S3 → Lambda → ECS, Batch re-evaluation), ONNX + quantization
+4. ONNX + quantization ✅ (classifier). AWS: free-tier design written, validated and exercised locally; **not deployed** (S3 → Lambda → DynamoDB; re-evaluation by chained Lambda)
 
 ## Data & license
 
