@@ -1,4 +1,5 @@
 import io
+import re
 
 import numpy as np
 import pytest
@@ -153,3 +154,28 @@ def test_full_flow_on_aws_backends(tmp_path) -> None:
         assert c.get(f"/media/{pid}").status_code == 200
         assert s3.head_object(Bucket="bkt", Key=f"uploads/{pid}.png")
         assert [p["id"] for p in c.get("/api/posts").json()] == [pid]
+
+
+def test_static_assets_are_versioned_and_served(env) -> None:
+    c, _, _ = env
+    html = c.get("/").text
+    assert "/static/style.css?v=" in html and "/static/app.js?v=" in html
+    css = c.get("/static/style.css")
+    assert css.status_code == 200 and "--brand" in css.text
+    # The page background must use separate properties: a `background` shorthand that puts a
+    # colour before a gradient list is invalid CSS and silently drops the whole declaration.
+    assert "background-color: var(--bg)" in css.text
+    assert "background: var(--bg) var(--bg-grad)" not in css.text
+    assert c.get("/static/app.js").status_code == 200
+
+
+def test_pages_have_icons_theme_toggle_and_escape_user_text(env) -> None:
+    c, _, _ = env
+    pid = post(c, title="<b>x</b>").json()["id"]
+    for url in ("/", "/submit", "/review", f"/post/{pid}"):
+        text = c.get(url).text
+        assert 'id="theme-toggle"' in text
+        used = set(re.findall(r'<use href="#(i-[a-z-]+)"', text))
+        defined = set(re.findall(r'<symbol id="(i-[a-z-]+)"', text))
+        assert used and used <= defined, used - defined  # no icon without a definition
+    assert "<b>x</b>" not in c.get("/").text and "&lt;b&gt;x&lt;/b&gt;" in c.get("/").text
