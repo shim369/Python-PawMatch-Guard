@@ -29,6 +29,8 @@ uv run pawmatch report runs/<run_dir> # print test metrics
 uv run pawmatch train-seg             # segmentation (configs/segmentation.yaml)
 uv run pawmatch train-det             # animal-head detector (configs/detection.yaml)
 uv run pawmatch detect-noise runs/<run_dir>  # 5% label-noise experiment
+uv run pawmatch evaluate-moderation   # whole-pipeline confusion matrix
+uv run pawmatch serve                 # demo web app (no authentication)
 ```
 
 Japanese output: `PAWMATCH_LANG=ja uv run pawmatch train` or `uv run pawmatch --lang ja train`.
@@ -50,14 +52,14 @@ src/models      classifier, training
 src/metrics     from-scratch metrics
 src/i18n        en / ja messages
 src/quality     annotation checks, agreement, noisy-label detection
-src/moderation  (Phase 3) rules, video
-src/api         (Phase 3) FastAPI app
+src/moderation  rules, blur, video (ffmpeg), pipeline, evaluation
+src/api         FastAPI app (posts, search, review queue)
 configs/        experiment YAMLs
 docs/           debugging log, annotation guidelines
 infra/          (Phase 4) AWS
 ```
 
-## Moderation rules (planned, Phase 3)
+## Moderation rules (implemented in `src/moderation/rules.py`)
 
 1. No animal detected → **reject**
 2. Face / license plate / text detected → auto-blur, then **publish**; low confidence → **needs review**
@@ -117,11 +119,34 @@ Caveats: (1) Oxford's boxes cover the animal's **head** only and only ~3.7k imag
 
 **Not done yet in Phase 2:** the custom face/plate/text annotations in Label Studio and the detector classes that depend on them. The metric code (IoU, AP@0.5, mAP@0.5:0.95, per-class recall) matches torchmetrics/pycocotools.
 
+### Phase 3: moderation pipeline and app
+
+End-to-end evaluation on the Phase 1 **test split** (1,104 pet photos, each submitted twice: once with the correct species and once with the wrong one; 2,208 cases; classifier + animal-head detector + rules; `uv run pawmatch evaluate-moderation`):
+
+| Case (expected verdict) | Publish | Needs review | Reject | n |
+|---|---|---|---|---|
+| Correct species (publish) | 1,089 | 12 | 3 | 1,104 |
+| Wrong species (needs review) | **4** | 1,097 | 3 | 1,104 |
+
+- Misses (a wrong-species post published): 4 of 1,104. Unnecessary reviews: 12 of 1,104 (1.1 %). Valid posts wrongly rejected: 3 of 1,104 (the detector found no head).
+- The 50 % "human review rate" in the JSON is **an artefact of the test design** (half the cases are deliberately wrong); on real traffic it would be much lower.
+- **Not evaluated: posts without any animal** (rule 1). That needs negative photos; the harness accepts a folder (`--negatives DIR`) but no such set is included yet, so the reject rate on real non-animal photos is unknown. Only a flat grey image was checked by hand (rejected).
+- Test photos are clean pet portraits and the species classifier is 99.5 % accurate on them, so these numbers are optimistic for messy user uploads. Thresholds in `configs/moderation.yaml` were not tuned on a validation set.
+
+**Known limitations (important):**
+- Face / licence-plate / text detection is **not trained**, so the PII blur path is implemented and unit-tested with fakes but never triggers with the real models.
+- Videos are screened frame by frame (1 fps, worst frame wins) but the video file itself is not blurred, so any video with detected personal information is sent to review rather than published.
+- The web app has **no authentication** (demo only); the review queue is open. Do not expose it publicly.
+- Video extraction needs a working `ffmpeg`. It could not be run on the development machine (the Homebrew build was missing `libvpx`) and the Docker image was not rebuilt/run after adding ffmpeg, so that path is covered by a test that is skipped here and is unverified end to end.
+- Matching is intentionally light: filter by species (taken from the classifier) and search title/description.
+
+Run the app: `uv run pawmatch serve` then open http://127.0.0.1:8000 (`?lang=ja` for Japanese). Point `configs/pipeline.yaml` at your trained runs first (weights are not in Git).
+
 ## Roadmap
 
 1. Classification & evaluation foundation ✅ (code), results below
 2. Segmentation ✅, annotation QA ✅ (guidelines, checks, noise detection), debugging log ✅; animal-head detector ✅; Label Studio annotation of face/plate/text pending
-3. Moderation pipeline, video (ffmpeg), FastAPI app
+3. Moderation pipeline ✅, FastAPI app ✅, video (ffmpeg) implemented but not verified end to end; negative-photo evaluation pending
 4. AWS (S3 → Lambda → ECS, Batch re-evaluation), ONNX + quantization
 
 ## Data & license
