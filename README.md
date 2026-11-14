@@ -129,10 +129,11 @@ End-to-end evaluation on the Phase 1 **test split** (1,104 pet photos, each subm
 |---|---|---|---|---|
 | Correct species (publish) | 1,089 | 12 | 3 | 1,104 |
 | Wrong species (needs review) | **4** | 1,097 | 3 | 1,104 |
+| **No animal (reject)** | **31** | 81 | 188 | 300 |
 
 - Misses (a wrong-species post published): 4 of 1,104. Unnecessary reviews: 12 of 1,104 (1.1 %). Valid posts wrongly rejected: 3 of 1,104 (the detector found no head).
 - The 50 % "human review rate" in the JSON is **an artefact of the test design** (half the cases are deliberately wrong); on real traffic it would be much lower.
-- **Not evaluated: posts without any animal** (rule 1). That needs negative photos; the harness accepts a folder (`--negatives DIR`) but no such set is included yet, so the reject rate on real non-animal photos is unknown. Only a flat grey image was checked by hand (rejected).
+- **Posts without any animal (rule 1) — a real weakness.** On 300 Open Images CC BY 2.0 photos with no animal label (`scripts/build_negatives.py`; 48 random ones plus all 31 published ones were checked by eye and show no animal): **188 rejected (62.7 %), 81 sent to review (27.0 %), 31 published (10.3 %)**. The animal-head detector was trained on pet photos only, never on negatives, so it fires on human faces/heads (score 0.6–0.96) and sometimes on food or objects (0.5–0.8). Raising the animal threshold does not fix it without costing pet recall: at 0.9, 4.3 % of the negatives still pass while 3.0 % of pet photos would no longer count as animals ([`docs/results/negatives_score_analysis.json`](docs/results/negatives_score_analysis.json)). The remedy is to train the detector with negatives (people included), which is not done yet. Caveats: a missing Open Images label is not proof of no animal (see the spot checks), and 300 images is a small sample.
 - Test photos are clean pet portraits and the species classifier is 99.5 % accurate on them, so these numbers are optimistic for messy user uploads. Thresholds in `configs/moderation.yaml` were not tuned on a validation set.
 
 **Known limitations (important):**
@@ -194,9 +195,11 @@ Known gaps: the Lambda image has no `ffmpeg`, so **video posts would end in `err
 
 1. Classification & evaluation foundation ✅ (code), results below
 2. Segmentation ✅, annotation QA ✅ (guidelines, checks, noise detection), debugging log ✅; animal-head detector ✅; Label Studio annotation of face/plate/text pending
-3. Moderation pipeline ✅, FastAPI app ✅, video frame extraction verified in Docker on a synthetic clip only; negative-photo evaluation pending
+3. Moderation pipeline ✅, FastAPI app ✅, video frame extraction verified in Docker on a synthetic clip only; negative-photo evaluation done: 10.3 % of no-animal photos still pass (detector needs negative training)
 4. ONNX + quantization ✅ (classifier). AWS: free-tier design written, validated and exercised locally; **not deployed** (S3 → Lambda → DynamoDB; re-evaluation by chained Lambda)
 
 ## Data & license
 
 Oxford-IIIT Pet is licensed CC BY-SA 4.0. Only split CSVs and hashes are committed; images are not.
+
+The 300 negative photos come from [Open Images](https://github.com/openimages/dataset) (images CC BY 2.0 per-image metadata, annotations CC BY 4.0). They are not committed; [`data/negatives_manifest.csv`](data/negatives_manifest.csv) lists each image's author, title and source for attribution, and `scripts/build_negatives.py` rebuilds the set.

@@ -1,0 +1,12 @@
+{
+  "note": "best 'animal' detection score per image; negatives = 300 Open Images CC BY 2.0 photos without animal labels; pets = first 300 Phase 1 test photos",
+  "quantiles_5_25_50_75_95": {"negatives": [0.0, 0.0, 0.17, 0.49, 0.89], "pets": [0.94, 0.99, 0.99, 1.0, 1.0]},
+  "threshold_tradeoff": [
+    {"threshold": 0.5,  "negatives_above": 74, "pets_below": 2},
+    {"threshold": 0.7,  "negatives_above": 47, "pets_below": 2},
+    {"threshold": 0.8,  "negatives_above": 23, "pets_below": 3},
+    {"threshold": 0.9,  "negatives_above": 13, "pets_below": 9},
+    {"threshold": 0.95, "negatives_above": 9,  "pets_below": 18}
+  ],
+  "n_each": 300
+}

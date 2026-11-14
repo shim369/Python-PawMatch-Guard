@@ -1,7 +1,7 @@
 {
-  "n_cases": 2208,
+  "n_cases": 2508,
   "n_images": 1104,
-  "n_negatives": 0,
+  "n_negatives": 300,
   "labels": [
     "PUBLISH",
     "REVIEW",
@@ -19,9 +19,9 @@
       3
     ],
     [
-      0,
-      0,
-      0
+      31,
+      81,
+      188
     ]
   ],
   "by_kind": {
@@ -36,10 +36,16 @@
       "review": 1097,
       "reject": 3,
       "n": 1104
+    },
+    "negative": {
+      "publish": 31,
+      "review": 81,
+      "reject": 188,
+      "n": 300
     }
   },
-  "human_review_rate": 0.5022644927536232,
-  "miss_count": 4,
+  "human_review_rate": 0.474481658692185,
+  "miss_count": 35,
   "miss_examples": [
     [
       "mismatch",
@@ -56,7 +62,71 @@
     [
       "mismatch",
       "scottish_terrier_3"
+    ],
+    [
+      "negative",
+      "017b690dbb7552db.jpg"
+    ],
+    [
+      "negative",
+      "043f3655deab6e7c.jpg"
+    ],
+    [
+      "negative",
+      "07d897eacf63e840.jpg"
+    ],
+    [
+      "negative",
+      "0bb193f2cf957fdd.jpg"
+    ],
+    [
+      "negative",
+      "0f48108b3973c7ec.jpg"
+    ],
+    [
+      "negative",
+      "0f65b1edbacf6563.jpg"
+    ],
+    [
+      "negative",
+      "116cb9c709ca88e7.jpg"
+    ],
+    [
+      "negative",
+      "1421f2633f880b2a.jpg"
+    ],
+    [
+      "negative",
+      "182c5012752ad092.jpg"
+    ],
+    [
+      "negative",
+      "1fd97b32298d03ae.jpg"
+    ],
+    [
+      "negative",
+      "252828fc62496159.jpg"
+    ],
+    [
+      "negative",
+      "25f91afe0f75cba2.jpg"
+    ],
+    [
+      "negative",
+      "2ce8aea35a405d83.jpg"
+    ],
+    [
+      "negative",
+      "3d39db631029f3ed.jpg"
+    ],
+    [
+      "negative",
+      "63d3df798bc8840f.jpg"
+    ],
+    [
+      "negative",
+      "8266d7d84f00cd19.jpg"
     ]
   ],
-  "note": "negatives not evaluated"
+  "note": "includes negatives"
 }
