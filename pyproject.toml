@@ -3,6 +3,9 @@ name = "pawmatch-guard"
 version = "0.1.0"
 description = "Pet adoption matching app with an AI moderation pipeline (classification, detection, segmentation)."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Shimpei Ohtani" }]
 requires-python = ">=3.12"
 dependencies = [
     "torch>=2.4",
