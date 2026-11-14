@@ -4,12 +4,26 @@
 
 A pet-adoption matching app with an **AI moderation pipeline** for user posts. Matching is kept light; the showcase is the image/video review pipeline: classification, detection and segmentation models decide *publish / needs review / reject*, and anything uncertain goes to a human.
 
-<p align="center">
-  <img src="docs/images/web-light.jpg" alt="Browse page, light theme" width="49%">
-  <img src="docs/images/web-dark.jpg" alt="Browse page, dark theme" width="49%">
-</p>
 
 > Status: **Phase 1 (classification + evaluation foundation) implemented.** Phases 2–4 are planned (see below).
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/images/home-light.jpg" alt="Browse page with the hero illustration, light theme" width="49%">
+  <img src="docs/images/home-dark.jpg" alt="Browse page, dark theme" width="49%">
+</p>
+
+| | |
+|---|---|
+| ![Browse: published posts as cards](docs/images/browse-grid.jpg) | ![Post detail with the safety checks](docs/images/post-detail.jpg) |
+| Browse: published posts as cards | Post detail with the safety checks |
+| ![Review queue: the AI's doubt next to the poster's claim](docs/images/review-queue.jpg) | ![Post a pet: drag-and-drop preview (dark theme)](docs/images/submit-dark.jpg) |
+| Review queue: the AI's doubt next to the poster's claim | Post a pet: drag-and-drop preview (dark theme) |
+
+<p align="center"><img src="docs/images/mobile-ja.jpg" alt="Narrow screen, Japanese UI" width="300"><br><sub>Narrow screen, Japanese UI</sub></p>
+
+Captured from the running app (`uv run pawmatch serve`) with a few sample posts made from the Oxford-IIIT Pet photos (CC BY-SA 4.0). The hero illustration is original artwork for this project (MIT).
 
 ## Features (Phase 1)
 
@@ -217,3 +231,9 @@ Known gaps: the Lambda image has no `ffmpeg`, so **video posts would end in `err
 Oxford-IIIT Pet is licensed CC BY-SA 4.0. Only split CSVs and hashes are committed; images are not.
 
 The 300 negative photos come from [Open Images](https://github.com/openimages/dataset) (images CC BY 2.0 per-image metadata, annotations CC BY 4.0). They are not committed; [`data/negatives_manifest.csv`](data/negatives_manifest.csv) lists each image's author, title and source for attribution, and `scripts/build_negatives.py` rebuilds the set.
+
+## License
+
+The source code is released under the [MIT License](LICENSE). The hero illustration is original to this project and covered by the same license.
+
+Datasets and images are **not** covered by it and keep their own licenses: Oxford-IIIT Pet (CC BY-SA 4.0) and the Open Images negatives (CC BY 2.0 images, CC BY 4.0 annotations; attribution in [`data/negatives_manifest.csv`](data/negatives_manifest.csv)). Trained weights are derived from those datasets and are not distributed here; check the dataset terms before sharing them. Third-party Python packages keep their own licenses.

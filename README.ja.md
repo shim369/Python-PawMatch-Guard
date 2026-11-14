@@ -4,12 +4,26 @@
 
 犬猫の里親マッチングアプリに、投稿の **AI審査(コンテンツモデレーション)** を組み込んだポートフォリオです。マッチングは軽めにし、見せ場は画像・動画の審査パイプラインに置いています。分類・検出・セグメンテーションの3モデルで「公開可 / 要確認 / 却下」を判定し、迷うものは人の確認に回します。
 
-<p align="center">
-  <img src="docs/images/web-light.jpg" alt="Browse page, light theme" width="49%">
-  <img src="docs/images/web-dark.jpg" alt="Browse page, dark theme" width="49%">
-</p>
 
 > 状況: **フェーズ1(分類と評価の土台)を実装済み。** フェーズ2〜4は計画中です(下記)。
+
+## スクリーンショット
+
+<p align="center">
+  <img src="docs/images/home-light.jpg" alt="ヒーロー画像付きのトップ画面(ライト)" width="49%">
+  <img src="docs/images/home-dark.jpg" alt="トップ画面(ダーク)" width="49%">
+</p>
+
+| | |
+|---|---|
+| ![一覧: 公開された投稿をカードで表示](docs/images/browse-grid.jpg) | ![投稿の詳細と安全チェック](docs/images/post-detail.jpg) |
+| 一覧: 公開された投稿をカードで表示 | 投稿の詳細と安全チェック |
+| ![確認キュー: AIの判定と投稿者の申告を並べて表示](docs/images/review-queue.jpg) | ![投稿画面: ドラッグ&ドロップとプレビュー(ダーク)](docs/images/submit-dark.jpg) |
+| 確認キュー: AIの判定と投稿者の申告を並べて表示 | 投稿画面: ドラッグ&ドロップとプレビュー(ダーク) |
+
+<p align="center"><img src="docs/images/mobile-ja.jpg" alt="狭い画面(日本語UI)" width="300"><br><sub>狭い画面(日本語UI)</sub></p>
+
+実際に動かしたアプリ(`uv run pawmatch serve`)の画面です。サンプル投稿にはOxford-IIIT Petの写真(CC BY-SA 4.0)を使っています。ヒーローのイラストは、このプロジェクトのために描いたオリジナルです(MIT)。
 
 ## 機能(フェーズ1)
 
@@ -217,3 +231,9 @@ F1が低い品種: staffordshire_bull_terrier 0.71、beagle 0.79、american_pit_
 Oxford-IIIT PetはCC BY-SA 4.0です。コミットするのは分割CSVとハッシュのみで、画像は含めません。
 
 ネガティブ画像300枚は[Open Images](https://github.com/openimages/dataset)由来です(画像は画像ごとのメタデータでCC BY 2.0、アノテーションはCC BY 4.0)。画像はコミットせず、[`data/negatives_manifest.csv`](data/negatives_manifest.csv) に帰属表示のための作者・タイトル・出典を記載し、`scripts/build_negatives.py` で再構築できます。
+
+## ライセンス
+
+ソースコードは[MITライセンス](LICENSE)で公開しています。ヒーローのイラストはこのプロジェクトのオリジナルで、同じライセンスです。
+
+データセットと画像はMITの対象**外**で、それぞれのライセンスに従います: Oxford-IIIT Pet(CC BY-SA 4.0)、Open Imagesのネガティブ画像(画像はCC BY 2.0、アノテーションはCC BY 4.0。帰属は[`data/negatives_manifest.csv`](data/negatives_manifest.csv))。学習済みの重みはこれらのデータから派生したもので、ここでは配布していません。共有する前にデータセットの条件を確認してください。サードパーティのPythonパッケージは、それぞれのライセンスに従います。
