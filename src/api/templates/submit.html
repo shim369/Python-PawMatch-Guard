@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% block body %}
+<h2>{{ t('nav.submit') }}</h2>
+<form id="f">
+ <label>{{ t('form.title') }}<br><input name="title" required maxlength="120"></label>
+ <label>{{ t('form.description') }}<br><textarea name="description" rows="3" maxlength="2000"></textarea></label>
+ <label>{{ t('form.species') }}<br><select name="species"><option value="cat">{{ t('cat') }}</option><option value="dog">{{ t('dog') }}</option></select></label>
+ <label>{{ t('form.file') }}<br><input type="file" name="file" accept="image/*,video/*" required></label>
+ <button>{{ t('form.submit') }}</button>
+</form>
+<p id="msg" class="muted"></p>
+<script>
+document.getElementById('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const r = await fetch('/api/posts', {method:'POST', body:new FormData(e.target)});
+  const msg = document.getElementById('msg');
+  if (r.ok) { const j = await r.json(); location.href = '/post/' + j.id; }
+  else { msg.textContent = (await r.json()).detail; }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}{% block body %}
+<h2>{{ t('review.title') }}</h2>
+{% if not posts %}<p class="muted">{{ t('review.empty') }}</p>{% endif %}
+<div class="grid">
+{% for p in posts %}
+ <div class="card">
+  <img src="/review/media/{{ p.id }}" alt="{{ p.title }}">
+  <div><strong>{{ p.title }}</strong>
+   <p class="muted">{{ t('form.species') }}: {{ t(p.species) }} / {{ t('review.detected') }}: {{ t(p.detected_species) if p.detected_species else '-' }}</p>
+   <ul>{% for r in p.reason_text %}<li>{{ r }}</li>{% endfor %}</ul>
+   <form method="post" action="/review/{{ p.id }}">
+    <button name="decision" value="publish">{{ t('review.publish') }}</button>
+    <button name="decision" value="reject">{{ t('review.reject') }}</button>
+   </form>
+  </div>
+ </div>
+{% endfor %}
+</div>
+{% endblock %}

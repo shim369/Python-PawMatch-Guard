@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block body %}
+<form method="get">
+ <input name="q" value="{{ q }}" placeholder="{{ t('search.placeholder') }}">
+ <select name="species">
+  <option value="">{{ t('filter.all') }}</option>
+  <option value="cat" {{ 'selected' if species == 'cat' }}>{{ t('cat') }}</option>
+  <option value="dog" {{ 'selected' if species == 'dog' }}>{{ t('dog') }}</option>
+ </select>
+ <button>{{ t('search.button') }}</button>
+</form>
+{% if not posts %}<p class="muted">{{ t('post.empty') }}</p>{% endif %}
+<div class="grid">
+{% for p in posts %}
+ <a class="card" href="/post/{{ p.id }}" style="text-decoration:none;color:inherit">
+  <img src="/media/{{ p.id }}" alt="{{ p.title }}">
+  <div><strong>{{ p.title }}</strong><br>
+   <span class="badge">{{ t(p.detected_species or p.species) }}</span>
+   {% if p.media_type == 'video' %}<span class="badge">▶</span>{% endif %}</div>
+ </a>
+{% endfor %}
+</div>
+{% endblock %}

@@ -75,7 +75,8 @@ def decide(pred: Prediction, declared_species: str | None,
     animals = [d for d in pred.detections if d.label == "animal"]
     best = max((d.score for d in animals), default=0.0)
     if best < th.animal_reject:
-        return Decision(Verdict.REJECT, ("no_animal",), risk=1.0 - best)
+        return Decision(Verdict.REJECT, ("no_animal",), risk=1.0 - best,
+                        extra={"species": pred.predicted_species})
     if best < th.animal_ok:
         verdict = Verdict.REVIEW
         reasons.append("uncertain_animal")
@@ -95,7 +96,7 @@ def decide(pred: Prediction, declared_species: str | None,
 
     risk = (1.0 - best) + (0.5 if "species_mismatch" in reasons else 0.0) \
         + (0.25 if "pii_low_confidence" in reasons else 0.0)
-    return Decision(verdict, tuple(reasons), blur, risk)
+    return Decision(verdict, tuple(reasons), blur, risk, {"species": pred.predicted_species})
 
 
 def worst(decisions: list[Decision]) -> Decision:

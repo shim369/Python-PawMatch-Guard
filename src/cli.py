@@ -60,6 +60,14 @@ def _train_det(args: argparse.Namespace) -> None:
     run(Path(args.config))
 
 
+def _serve(args: argparse.Namespace) -> None:
+    import uvicorn
+
+    from src.api.app import create_app
+
+    uvicorn.run(create_app(data_dir=Path(args.data_dir)), host=args.host, port=args.port)
+
+
 def _noise(args: argparse.Namespace) -> None:
     from src.quality.noise_experiment import main as run_noise
 
@@ -94,6 +102,12 @@ def main(argv: list[str] | None = None) -> None:
     sp = sub.add_parser("train-det", help=t("cli.train_det"))
     sp.add_argument("--config", default="configs/detection.yaml")
     sp.set_defaults(fn=_train_det)
+
+    sp = sub.add_parser("serve", help=t("cli.serve"))
+    sp.add_argument("--host", default="127.0.0.1")
+    sp.add_argument("--port", type=int, default=8000)
+    sp.add_argument("--data-dir", default="data/app")
+    sp.set_defaults(fn=_serve)
 
     sp = sub.add_parser("detect-noise", help=t("cli.noise"))
     sp.add_argument("run_dir")

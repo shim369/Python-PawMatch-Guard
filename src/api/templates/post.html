@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block body %}
+<h2>{{ post.title }}</h2>
+<p><span class="badge">{{ t('status.' + post.status) }}</span></p>
+{% if post.status == 'pending' %}
+ <p class="muted">{{ t('status.pending_hint') }}</p>
+ <script>setTimeout(() => location.reload(), 2000)</script>
+{% endif %}
+{% if post.status == 'published' %}
+ {% if post.media_type == 'video' %}<video src="/media/{{ post.id }}/video" controls poster="/media/{{ post.id }}" style="max-width:100%"></video>
+ {% else %}<img src="/media/{{ post.id }}" style="max-width:100%">{% endif %}
+{% endif %}
+<p>{{ post.description }}</p>
+{% if post.reason_text %}<ul>{% for r in post.reason_text %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+{% endblock %}
