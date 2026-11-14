@@ -142,6 +142,29 @@ End-to-end evaluation on the Phase 1 **test split** (1,104 pet photos, each subm
 
 Run the app: `uv run pawmatch serve` then open http://127.0.0.1:8000 (`?lang=ja` for Japanese). Point `configs/pipeline.yaml` at your trained runs first (weights are not in Git).
 
+### Phase 4 (partial): ONNX export, quantization, CPU speed
+
+Species+breed classifier (ResNet50), CPU only, per-image latency p50 / p95 in ms (40 runs after 5 warm-up), accuracy on the first 400 test images. Measured on **Apple M1 (8 cores)**, torch 2.15.0, onnxruntime 1.32.0; this is *not* an AWS CPU.
+
+| Variant | Input | Batch 1 (ms) | Batch 8 (ms/img) | Breed acc | Species acc | Agrees with PyTorch |
+|---|---|---|---|---|---|---|
+| pytorch_fp32 | 224 | 24.3 / 34.1 | 24.7 / 26.1 | 0.895 | 0.995 | 1.000 |
+| onnx_fp32 | 224 | 52.7 / 81.9 | 52.6 / 65.5 | 0.895 | 0.995 | 1.000 |
+| onnx_int8_dynamic | 224 | 26.5 / 34.1 | 27.0 / 29.3 | 0.885 | 0.998 | 0.965 |
+| pytorch_fp32 | 160 | 15.9 / 21.0 | 13.2 / 17.1 | 0.900 | 0.995 | 1.000 |
+| onnx_fp32 | 160 | 32.5 / 47.9 | 32.6 / 49.8 | 0.900 | 0.995 | 1.000 |
+| onnx_int8_dynamic | 160 | 17.2 / 20.2 | 16.3 / 18.4 | 0.880 | 0.990 | 0.950 |
+
+Model size: ONNX fp32 94 MB, dynamic INT8 24 MB.
+
+What the table shows (single machine, one run, n=400 so accuracy has roughly ±1.5 pt of sampling noise):
+- **ONNX Runtime fp32 was about 2× *slower* than PyTorch on this Mac** (≈52 vs ≈24 ms). Changing thread count and graph-optimization level did not change that (46–57 ms), so I report it as measured rather than as a speed-up. Whether it holds on x86 (e.g. AWS) is not measured.
+- Dynamic INT8 matched PyTorch's speed (≈26 ms) at one quarter of the size, at a cost of about 1 pt breed accuracy (0.885 vs 0.895) and 96.5 % prediction agreement.
+- 160 px input is about 35 % faster than 224 px with no measurable accuracy loss at this sample size; the model was trained at 224 px, so check on a larger set before adopting it.
+- Batch size barely changed per-image latency on CPU.
+
+Not done: ONNX export of the detector (Faster R-CNN) and segmentation model; AWS infrastructure. Raw numbers: [`docs/results/onnx_benchmark.json`](docs/results/onnx_benchmark.json). Reproduce: `uv run pawmatch benchmark runs/<classifier_run>`.
+
 ## Roadmap
 
 1. Classification & evaluation foundation ✅ (code), results below
