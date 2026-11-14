@@ -1,0 +1,62 @@
+{
+  "n_cases": 2208,
+  "n_images": 1104,
+  "n_negatives": 0,
+  "labels": [
+    "PUBLISH",
+    "REVIEW",
+    "REJECT"
+  ],
+  "confusion_matrix_rows_expected_cols_actual": [
+    [
+      1089,
+      12,
+      3
+    ],
+    [
+      4,
+      1097,
+      3
+    ],
+    [
+      0,
+      0,
+      0
+    ]
+  ],
+  "by_kind": {
+    "normal": {
+      "publish": 1089,
+      "review": 12,
+      "reject": 3,
+      "n": 1104
+    },
+    "mismatch": {
+      "publish": 4,
+      "review": 1097,
+      "reject": 3,
+      "n": 1104
+    }
+  },
+  "human_review_rate": 0.5022644927536232,
+  "miss_count": 4,
+  "miss_examples": [
+    [
+      "mismatch",
+      "Bombay_29"
+    ],
+    [
+      "mismatch",
+      "Sphynx_57"
+    ],
+    [
+      "mismatch",
+      "scottish_terrier_119"
+    ],
+    [
+      "mismatch",
+      "scottish_terrier_3"
+    ]
+  ],
+  "note": "negatives not evaluated"
+}

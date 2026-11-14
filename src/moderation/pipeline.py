@@ -41,10 +41,12 @@ class ModerationPipeline:
         self.detector, self.classifier = detector, classifier
         self.th = thresholds or Thresholds()
 
-    def analyze(self, image: np.ndarray, declared_species: str | None) -> Decision:
+    def predict(self, image: np.ndarray) -> Prediction:
         species, conf = self.classifier.predict(image)
-        pred = Prediction(tuple(self.detector.detect(image)), species, conf)
-        return decide(pred, declared_species, self.th)
+        return Prediction(tuple(self.detector.detect(image)), species, conf)
+
+    def analyze(self, image: np.ndarray, declared_species: str | None) -> Decision:
+        return decide(self.predict(image), declared_species, self.th)
 
     def moderate_image(self, image: np.ndarray, declared_species: str | None
                        ) -> tuple[ModerationResult, np.ndarray]:

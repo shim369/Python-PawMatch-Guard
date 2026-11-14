@@ -68,6 +68,12 @@ def _serve(args: argparse.Namespace) -> None:
     uvicorn.run(create_app(data_dir=Path(args.data_dir)), host=args.host, port=args.port)
 
 
+def _eval_moderation(args: argparse.Namespace) -> None:
+    from src.moderation.evaluate import main as run_eval
+
+    run_eval(args.config, args.out, args.negatives, args.limit)
+
+
 def _noise(args: argparse.Namespace) -> None:
     from src.quality.noise_experiment import main as run_noise
 
@@ -108,6 +114,13 @@ def main(argv: list[str] | None = None) -> None:
     sp.add_argument("--port", type=int, default=8000)
     sp.add_argument("--data-dir", default="data/app")
     sp.set_defaults(fn=_serve)
+
+    sp = sub.add_parser("evaluate-moderation", help=t("cli.eval_mod"))
+    sp.add_argument("--config", default="configs/pipeline.yaml")
+    sp.add_argument("--out", default="docs/results/moderation_eval.json")
+    sp.add_argument("--negatives", default=None, help="folder of photos without animals")
+    sp.add_argument("--limit", type=int, default=None)
+    sp.set_defaults(fn=_eval_moderation)
 
     sp = sub.add_parser("detect-noise", help=t("cli.noise"))
     sp.add_argument("run_dir")
