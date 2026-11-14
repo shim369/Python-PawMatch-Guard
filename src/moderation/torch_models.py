@@ -66,3 +66,23 @@ def load_pipeline(config_path: Path = Path("configs/pipeline.yaml")) -> Moderati
         TorchSpeciesClassifier(Path(cfg["classifier_run"]), device),
         th,
     )
+
+
+def load_pipeline_from_env(default: Path = Path("configs/pipeline.yaml")) -> ModerationPipeline:
+    """Local run dirs by default; if PAWMATCH_MODEL_PREFIX is set, pull weights from S3/MinIO
+    (bucket PAWMATCH_MODEL_BUCKET, falling back to PAWMATCH_BUCKET) first."""
+    import os
+    import tempfile
+
+    prefix = os.environ.get("PAWMATCH_MODEL_PREFIX")
+    if not prefix:
+        return load_pipeline(default)
+    from src.storage.blobs import S3BlobStore
+
+    from .weights import sync_weights
+
+    bucket = os.environ.get("PAWMATCH_MODEL_BUCKET") or os.environ["PAWMATCH_BUCKET"]
+    blobs = S3BlobStore(bucket, endpoint_url=os.environ.get("PAWMATCH_AWS_ENDPOINT"))
+    cfg = sync_weights(blobs, prefix, Path(tempfile.mkdtemp(prefix="weights-")),
+                       Path("configs/moderation.yaml"))
+    return load_pipeline(cfg)

@@ -80,6 +80,24 @@ def _benchmark(args: argparse.Namespace) -> None:
     run_bench(args.run_dir, args.out, args.work_dir)
 
 
+def _moderate_post(args: argparse.Namespace) -> None:
+    from src.api.jobs import moderate_post
+    from src.moderation.torch_models import load_pipeline_from_env
+    from src.storage.factory import from_env
+
+    db, blobs = from_env(Path(args.data_dir))
+    print(moderate_post(db, blobs, load_pipeline_from_env(), args.id))
+
+
+def _reevaluate(args: argparse.Namespace) -> None:
+    from src.api.jobs import reevaluate_all
+    from src.moderation.torch_models import load_pipeline_from_env
+    from src.storage.factory import from_env
+
+    db, blobs = from_env(Path(args.data_dir))
+    print(json.dumps(reevaluate_all(db, blobs, load_pipeline_from_env()), indent=2))
+
+
 def _noise(args: argparse.Namespace) -> None:
     from src.quality.noise_experiment import main as run_noise
 
@@ -133,6 +151,15 @@ def main(argv: list[str] | None = None) -> None:
     sp.add_argument("--out", default="docs/results/onnx_benchmark.json")
     sp.add_argument("--work-dir", default="runs/onnx")
     sp.set_defaults(fn=_benchmark)
+
+    sp = sub.add_parser("moderate-post", help=t("cli.moderate_post"))
+    sp.add_argument("--id", type=int, required=True)
+    sp.add_argument("--data-dir", default="data/app")
+    sp.set_defaults(fn=_moderate_post)
+
+    sp = sub.add_parser("reevaluate", help=t("cli.reevaluate"))
+    sp.add_argument("--data-dir", default="data/app")
+    sp.set_defaults(fn=_reevaluate)
 
     sp = sub.add_parser("detect-noise", help=t("cli.noise"))
     sp.add_argument("run_dir")
