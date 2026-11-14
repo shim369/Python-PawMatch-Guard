@@ -10,3 +10,8 @@ data/*
 runs/
 *.pt
 *.onnx
+
+.terraform/
+*.tfstate
+*.tfstate.*
+infra/terraform/.build/

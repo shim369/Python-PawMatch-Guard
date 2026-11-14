@@ -42,10 +42,16 @@ def run_moderation(post: dict, blobs: BlobStore, pipe: ModerationPipeline):
 
 def moderate_post(db: PostStore, blobs: BlobStore, pipe: ModerationPipeline,
                   post_id: int) -> str:
-    """Moderate one post and store the result. Never leaves a post 'pending'."""
+    """Moderate one *pending* post and store the result. Never leaves a post 'pending'.
+
+    Idempotent: S3 can deliver an event twice, so a post that already has a result (or a
+    human decision) is returned unchanged instead of being moderated again.
+    """
     post = db.get(post_id)
     if post is None:
         raise KeyError(f"post {post_id} not found")
+    if post["status"] != "pending":
+        return post["status"]
     try:
         decision, shown = run_moderation(post, blobs, pipe)
         buf = io.BytesIO()

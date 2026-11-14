@@ -96,3 +96,12 @@ def test_sync_weights_writes_a_pipeline_config(tmp_path) -> None:
     c = yaml.safe_load(cfg.read_text())
     assert (tmp_path / "dest" / "detector" / "model.pt").read_bytes() == b"detector-model.pt"
     assert c["classifier_run"].endswith("classifier") and c["thresholds"].endswith("th.yaml")
+
+
+def test_moderate_post_is_idempotent_and_keeps_human_decisions(env) -> None:
+    db, blobs, det, pipe = env
+    pid = add(db, blobs)
+    assert jobs.moderate_post(db, blobs, pipe, pid) == "published"
+    det.dets = []  # a duplicate event arrives after the model changed
+    assert jobs.moderate_post(db, blobs, pipe, pid) == "published"
+    assert db.get(pid)["status"] == "published"
