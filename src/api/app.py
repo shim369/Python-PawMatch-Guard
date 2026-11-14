@@ -5,30 +5,27 @@ Demo notes: there is no authentication; the review queue is open. Do not expose 
 
 from __future__ import annotations
 
-import io
 import mimetypes
-import tempfile
+import os
 from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 
-import numpy as np
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from PIL import Image
 from pydantic import BaseModel
 
 from src.i18n import SUPPORTED, get_lang, t
 from src.moderation.pipeline import ModerationPipeline
-from src.moderation.rules import Verdict
 from src.storage.base import BlobStore, PostStore
 from src.storage.factory import from_env
+
+from . import jobs
 
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 VIDEO_EXT = {".mp4", ".mov", ".webm"}
 MAX_BYTES = {"image": 25 * 1024 * 1024, "video": 100 * 1024 * 1024}
-STATUS_OF = {Verdict.PUBLISH: "published", Verdict.REVIEW: "review", Verdict.REJECT: "rejected"}
 TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 
@@ -43,14 +40,15 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
     if db is None or blobs is None:
         env_db, env_blobs = from_env(data_dir)
         db, blobs = db or env_db, blobs or env_blobs
-    upload_key = lambda pid, ext: f"uploads/{pid}{ext}"  # noqa: E731
-    public_key = lambda pid: f"public/{pid}.jpg"  # noqa: E731
+    upload_key, public_key = jobs.upload_key, jobs.public_key
+    # "external": an ECS worker triggered by S3 moderates the post, not this process.
+    in_process = os.environ.get("PAWMATCH_MODERATION", "background") == "background"
 
     if pipeline_factory is None:
         def pipeline_factory() -> ModerationPipeline:
-            from src.moderation.torch_models import load_pipeline
+            from src.moderation.torch_models import load_pipeline_from_env
 
-            return load_pipeline()
+            return load_pipeline_from_env()
 
     get_pipeline = lru_cache(maxsize=1)(pipeline_factory)
 
@@ -73,32 +71,15 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
             "reason_text": [t(f"reason.{r}", lang) for r in post["reasons"]],
         }
 
-    # ---- moderation (runs in the background) -------------------------------------------
     def moderate(post_id: int) -> None:
-        post = db.get(post_id)
-        if post is None:
+        if db.get(post_id) is None:
             return
         try:
             pipe = get_pipeline()
-            raw = blobs.get(upload_key(post_id, post["ext"]))
-            if post["media_type"] == "image":
-                img = np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))
-                res, shown = pipe.moderate_image(img, post["declared_species"])
-            else:
-                with tempfile.TemporaryDirectory() as tmp:
-                    src = Path(tmp) / f"video{post['ext']}"
-                    src.write_bytes(raw)
-                    res = pipe.moderate_video(src, Path(tmp) / "frames",
-                                              post["declared_species"])
-                shown = res.thumbnail
-            buf = io.BytesIO()
-            Image.fromarray(shown).save(buf, "JPEG", quality=90)
-            blobs.put(public_key(post_id), buf.getvalue())
-            d = res.decision
-            db.set_moderation(post_id, STATUS_OF[d.verdict], list(d.reasons),
-                              d.extra.get("species"))
-        except Exception:  # noqa: BLE001 - never leave a post stuck in "pending"
+        except Exception:  # noqa: BLE001 - e.g. missing weights; never leave "pending"
             db.set_moderation(post_id, "error", ["processing_failed"], None)
+            return
+        jobs.moderate_post(db, blobs, pipe, post_id)
 
     # ---- API ---------------------------------------------------------------------------
     @app.post("/api/posts", status_code=202)
@@ -117,7 +98,8 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
             raise HTTPException(413, "file too large")
         post_id = db.create_post(title.strip(), description.strip(), species, kind, ext)
         blobs.put(upload_key(post_id, ext), data)  # key from id, never from user input
-        background.add_task(moderate, post_id)
+        if in_process:
+            background.add_task(moderate, post_id)
         return {"id": post_id, "status": "pending"}
 
     @app.get("/api/posts")
@@ -142,7 +124,7 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
         if body.decision not in ("publish", "reject"):
             raise HTTPException(422, "decision must be 'publish' or 'reject'")
         new = "published" if body.decision == "publish" else "rejected"
-        if not db.set_status_if(post_id, "review", new):
+        if not db.set_status_if(post_id, "review", new, human=True):
             raise HTTPException(409, "post is not awaiting review")
         return {"id": post_id, "status": new}
 
@@ -196,7 +178,7 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
     def review_form(post_id: int, decision: str = Form(...)):
         if decision in ("publish", "reject"):
             db.set_status_if(post_id, "review", "published" if decision == "publish" else
-                             "rejected")
+                             "rejected", human=True)
         return RedirectResponse("/review", status_code=303)
 
     @app.exception_handler(HTTPException)
