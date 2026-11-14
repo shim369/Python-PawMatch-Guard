@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS posts (
     status TEXT NOT NULL DEFAULT 'pending',  -- pending | published | review | rejected | error
     reasons TEXT NOT NULL DEFAULT '[]',      -- JSON list of reason codes
     detected_species TEXT,                   -- cat | dog (what the classifier says)
+    human_reviewed INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
@@ -29,8 +30,11 @@ class Database:
     def __init__(self, path: Path) -> None:
         self.path = path
         path.parent.mkdir(parents=True, exist_ok=True)
-        with self._conn() as c:
+        with closing(self._conn()) as c, c:
             c.executescript(SCHEMA)
+            cols = {r["name"] for r in c.execute("PRAGMA table_info(posts)")}
+            if "human_reviewed" not in cols:  # DBs created before this column existed
+                c.execute("ALTER TABLE posts ADD COLUMN human_reviewed INTEGER NOT NULL DEFAULT 0")
 
     def _conn(self) -> sqlite3.Connection:
         c = sqlite3.connect(self.path)
@@ -57,11 +61,14 @@ class Database:
             c.execute("UPDATE posts SET status = ?, reasons = ?, detected_species = ? "
                       "WHERE id = ?", (status, json.dumps(reasons), detected_species, post_id))
 
-    def set_status_if(self, post_id: int, expected: str, new: str) -> bool:
-        """Compare-and-set, so a post can only be resolved once."""
+    def set_status_if(self, post_id: int, expected: str, new: str,
+                      human: bool = False) -> bool:
+        """Compare-and-set, so a post can only be resolved once. ``human`` marks a decision
+        made by a person, which automatic re-evaluation must never override."""
         with closing(self._conn()) as c, c:
-            cur = c.execute("UPDATE posts SET status = ? WHERE id = ? AND status = ?",
-                            (new, post_id, expected))
+            cur = c.execute(
+                "UPDATE posts SET status = ?, human_reviewed = MAX(human_reviewed, ?) "
+                "WHERE id = ? AND status = ?", (new, int(human), post_id, expected))
             return cur.rowcount == 1
 
     def list_posts(self, status: str, species: str | None = None, q: str | None = None,
@@ -84,4 +91,5 @@ class Database:
     def _row(row: sqlite3.Row) -> dict:
         d = dict(row)
         d["reasons"] = json.loads(d["reasons"])
+        d["human_reviewed"] = bool(d["human_reviewed"])
         return d

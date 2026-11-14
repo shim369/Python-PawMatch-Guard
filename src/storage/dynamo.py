@@ -66,14 +66,19 @@ class DynamoPostStore:
             Key={"id": post_id}, UpdateExpression=expr, ExpressionAttributeNames={"#st": "status"},
             ExpressionAttributeValues=values, ConditionExpression="attribute_exists(id)")
 
-    def set_status_if(self, post_id: int, expected: str, new: str) -> bool:
+    def set_status_if(self, post_id: int, expected: str, new: str,
+                      human: bool = False) -> bool:
         from botocore.exceptions import ClientError
 
+        expr, values = "SET #st = :new", {":new": new, ":exp": expected}
+        if human:
+            expr += ", human_reviewed = :h"
+            values[":h"] = True
         try:
             self.table.update_item(
-                Key={"id": post_id}, UpdateExpression="SET #st = :new",
+                Key={"id": post_id}, UpdateExpression=expr,
                 ConditionExpression="#st = :exp", ExpressionAttributeNames={"#st": "status"},
-                ExpressionAttributeValues={":new": new, ":exp": expected})
+                ExpressionAttributeValues=values)
             return True
         except ClientError as e:
             if e.response["Error"]["Code"] == "ConditionalCheckFailedException":
@@ -109,4 +114,5 @@ class DynamoPostStore:
         d["id"] = int(d["id"])
         d["reasons"] = json.loads(d["reasons"])
         d.setdefault("detected_species", None)
+        d["human_reviewed"] = bool(d.get("human_reviewed", False))
         return d

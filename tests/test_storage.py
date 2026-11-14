@@ -79,3 +79,15 @@ def test_local_blob_rejects_path_escape(tmp_path) -> None:
     with pytest.raises(ValueError):
         store.put("../evil", b"x")
     assert not (tmp_path / "evil").exists()
+
+
+def test_human_flag_is_set_only_by_human_resolution(posts) -> None:
+    a, b = new(posts), new(posts)
+    for i in (a, b):
+        posts.set_moderation(i, "review", ["species_mismatch"], "dog")
+    assert posts.get(a)["human_reviewed"] is False
+    posts.set_status_if(a, "review", "published", human=True)
+    posts.set_status_if(b, "review", "rejected")  # automatic
+    assert posts.get(a)["human_reviewed"] is True and posts.get(b)["human_reviewed"] is False
+    posts.set_moderation(a, "published", [], "cat")  # re-moderation keeps the flag
+    assert posts.get(a)["human_reviewed"] is True
