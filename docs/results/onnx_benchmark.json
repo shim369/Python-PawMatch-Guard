@@ -1,0 +1,133 @@
+{
+  "machine": "arm / macOS-26.6.2-arm64-arm-64bit",
+  "torch": "2.15.0",
+  "onnxruntime": "1.32.0",
+  "cpu_threads_torch": 4,
+  "n_accuracy_images": 400,
+  "model_size_mb": {
+    "fp32": 94.273798,
+    "int8": 23.771131
+  },
+  "rows": [
+    {
+      "variant": "pytorch_fp32",
+      "size": 224,
+      "batch": 1,
+      "p50_ms_per_image": 24.307458497787593,
+      "p95_ms_per_image": 34.1271107456123,
+      "species_acc": 0.995,
+      "breed_acc": 0.895,
+      "breed_agree_with_pytorch_fp32": 1.0
+    },
+    {
+      "variant": "pytorch_fp32",
+      "size": 224,
+      "batch": 8,
+      "p50_ms_per_image": 24.709010437618417,
+      "p95_ms_per_image": 26.10905081905912,
+      "species_acc": 0.995,
+      "breed_acc": 0.895,
+      "breed_agree_with_pytorch_fp32": 1.0
+    },
+    {
+      "variant": "onnx_fp32",
+      "size": 224,
+      "batch": 1,
+      "p50_ms_per_image": 52.70245850260835,
+      "p95_ms_per_image": 81.93820144952032,
+      "species_acc": 0.995,
+      "breed_acc": 0.895,
+      "breed_agree_with_pytorch_fp32": 1.0
+    },
+    {
+      "variant": "onnx_fp32",
+      "size": 224,
+      "batch": 8,
+      "p50_ms_per_image": 52.56717181237036,
+      "p95_ms_per_image": 65.46569683719099,
+      "species_acc": 0.995,
+      "breed_acc": 0.895,
+      "breed_agree_with_pytorch_fp32": 1.0
+    },
+    {
+      "variant": "onnx_int8_dynamic",
+      "size": 224,
+      "batch": 1,
+      "p50_ms_per_image": 26.49356300025829,
+      "p95_ms_per_image": 34.12096454339917,
+      "species_acc": 0.9975,
+      "breed_acc": 0.885,
+      "breed_agree_with_pytorch_fp32": 0.965
+    },
+    {
+      "variant": "onnx_int8_dynamic",
+      "size": 224,
+      "batch": 8,
+      "p50_ms_per_image": 26.98114843769872,
+      "p95_ms_per_image": 29.28341983097198,
+      "species_acc": 0.9975,
+      "breed_acc": 0.885,
+      "breed_agree_with_pytorch_fp32": 0.965
+    },
+    {
+      "variant": "pytorch_fp32",
+      "size": 160,
+      "batch": 1,
+      "p50_ms_per_image": 15.89537499967264,
+      "p95_ms_per_image": 21.04005799992592,
+      "species_acc": 0.995,
+      "breed_acc": 0.9,
+      "breed_agree_with_pytorch_fp32": 1.0
+    },
+    {
+      "variant": "pytorch_fp32",
+      "size": 160,
+      "batch": 8,
+      "p50_ms_per_image": 13.212119813033496,
+      "p95_ms_per_image": 17.080604168449995,
+      "species_acc": 0.995,
+      "breed_acc": 0.9,
+      "breed_agree_with_pytorch_fp32": 1.0
+    },
+    {
+      "variant": "onnx_fp32",
+      "size": 160,
+      "batch": 1,
+      "p50_ms_per_image": 32.52527099539293,
+      "p95_ms_per_image": 47.87454230026902,
+      "species_acc": 0.995,
+      "breed_acc": 0.9,
+      "breed_agree_with_pytorch_fp32": 1.0
+    },
+    {
+      "variant": "onnx_fp32",
+      "size": 160,
+      "batch": 8,
+      "p50_ms_per_image": 32.647877625095134,
+      "p95_ms_per_image": 49.7526524249224,
+      "species_acc": 0.995,
+      "breed_acc": 0.9,
+      "breed_agree_with_pytorch_fp32": 1.0
+    },
+    {
+      "variant": "onnx_int8_dynamic",
+      "size": 160,
+      "batch": 1,
+      "p50_ms_per_image": 17.16102049977053,
+      "p95_ms_per_image": 20.171445803862298,
+      "species_acc": 0.99,
+      "breed_acc": 0.88,
+      "breed_agree_with_pytorch_fp32": 0.95
+    },
+    {
+      "variant": "onnx_int8_dynamic",
+      "size": 160,
+      "batch": 8,
+      "p50_ms_per_image": 16.252645812983246,
+      "p95_ms_per_image": 18.443218831180275,
+      "species_acc": 0.99,
+      "breed_acc": 0.88,
+      "breed_agree_with_pytorch_fp32": 0.95
+    }
+  ]
+}

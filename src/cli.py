@@ -74,6 +74,12 @@ def _eval_moderation(args: argparse.Namespace) -> None:
     run_eval(args.config, args.out, args.negatives, args.limit)
 
 
+def _benchmark(args: argparse.Namespace) -> None:
+    from src.optimize.benchmark import main as run_bench
+
+    run_bench(args.run_dir, args.out, args.work_dir)
+
+
 def _noise(args: argparse.Namespace) -> None:
     from src.quality.noise_experiment import main as run_noise
 
@@ -121,6 +127,12 @@ def main(argv: list[str] | None = None) -> None:
     sp.add_argument("--negatives", default=None, help="folder of photos without animals")
     sp.add_argument("--limit", type=int, default=None)
     sp.set_defaults(fn=_eval_moderation)
+
+    sp = sub.add_parser("benchmark", help=t("cli.bench"))
+    sp.add_argument("run_dir", help="classifier run directory")
+    sp.add_argument("--out", default="docs/results/onnx_benchmark.json")
+    sp.add_argument("--work-dir", default="runs/onnx")
+    sp.set_defaults(fn=_benchmark)
 
     sp = sub.add_parser("detect-noise", help=t("cli.noise"))
     sp.add_argument("run_dir")
