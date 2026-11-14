@@ -15,3 +15,4 @@ runs/
 *.tfstate
 *.tfstate.*
 infra/terraform/.build/
+!data/negatives_manifest.csv
