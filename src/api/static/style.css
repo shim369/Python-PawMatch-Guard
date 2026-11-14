@@ -155,6 +155,14 @@ textarea.input { resize: vertical; min-height: 96px; }
 .chip input:checked + span { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
 .chip input:focus-visible + span { box-shadow: var(--focus); }
 
+.hero-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); align-items: center; gap: clamp(20px, 4vw, 56px); }
+.hero-copy { display: grid; gap: 22px; }
+.hero-art { display: grid; place-items: center; }
+.hero-svg { width: 100%; max-width: 520px; height: auto; filter: drop-shadow(0 18px 28px rgba(40, 30, 10, .14)); }
+.hero-svg .float { animation: bob 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-8px) scale(1.06); } }
+@media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } .hero-art { order: -1; } .hero-svg { max-width: 340px; } }
+
 /* ---------- How it works ---------- */
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 8px 0 30px; }
 .step { background: color-mix(in srgb, var(--surface) 78%, transparent); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: flex; gap: 14px; }
