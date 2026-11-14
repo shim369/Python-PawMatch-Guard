@@ -137,7 +137,7 @@ End-to-end evaluation on the Phase 1 **test split** (1,104 pet photos, each subm
 - Face / licence-plate / text detection is **not trained**, so the PII blur path is implemented and unit-tested with fakes but never triggers with the real models.
 - Videos are screened frame by frame (1 fps, worst frame wins) but the video file itself is not blurred, so any video with detected personal information is sent to review rather than published.
 - The web app has **no authentication** (demo only); the review queue is open. Do not expose it publicly.
-- Video extraction needs a working `ffmpeg`. It could not be run on the development machine (the Homebrew build was missing `libvpx`) and the Docker image was not rebuilt/run after adding ffmpeg, so that path is covered by a test that is skipped here and is unverified end to end.
+- Video extraction needs a working `ffmpeg`. The Homebrew build on the development machine is broken (missing `libvpx`), so the unit test is skipped there; inside the Docker image (which installs ffmpeg) a synthetic 3-second clip was split into 3 frames. A real user video through the whole pipeline and the web app has not been tested.
 - Matching is intentionally light: filter by species (taken from the classifier) and search title/description.
 
 Run the app: `uv run pawmatch serve` then open http://127.0.0.1:8000 (`?lang=ja` for Japanese). Point `configs/pipeline.yaml` at your trained runs first (weights are not in Git).
@@ -146,7 +146,7 @@ Run the app: `uv run pawmatch serve` then open http://127.0.0.1:8000 (`?lang=ja`
 
 1. Classification & evaluation foundation ✅ (code), results below
 2. Segmentation ✅, annotation QA ✅ (guidelines, checks, noise detection), debugging log ✅; animal-head detector ✅; Label Studio annotation of face/plate/text pending
-3. Moderation pipeline ✅, FastAPI app ✅, video (ffmpeg) implemented but not verified end to end; negative-photo evaluation pending
+3. Moderation pipeline ✅, FastAPI app ✅, video frame extraction verified in Docker on a synthetic clip only; negative-photo evaluation pending
 4. AWS (S3 → Lambda → ECS, Batch re-evaluation), ONNX + quantization
 
 ## Data & license
