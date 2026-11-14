@@ -1,0 +1,4 @@
+# Weights are not in Git. Point these at your own training runs (see README).
+classifier_run: runs/20261113-074911
+detector_run: runs/det-20261114-183926
+thresholds: configs/moderation.yaml
