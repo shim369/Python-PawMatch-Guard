@@ -2,7 +2,8 @@
 
 PAWMATCH_STORAGE=local (default): SQLite + local files under the data dir.
 PAWMATCH_STORAGE=aws            : DynamoDB (PAWMATCH_TABLE) + S3 (PAWMATCH_BUCKET).
-  PAWMATCH_AWS_ENDPOINT lets the same code talk to MinIO / local emulators.
+  PAWMATCH_S3_ENDPOINT / PAWMATCH_DYNAMODB_ENDPOINT point the same code at MinIO and
+  DynamoDB Local (leave unset for real AWS).
 """
 
 from __future__ import annotations
@@ -18,9 +19,10 @@ def from_env(data_dir: Path) -> tuple[PostStore, BlobStore]:
     if os.environ.get("PAWMATCH_STORAGE", "local") == "aws":
         from .dynamo import DynamoPostStore
 
-        endpoint = os.environ.get("PAWMATCH_AWS_ENDPOINT")
-        return (DynamoPostStore(os.environ["PAWMATCH_TABLE"], endpoint_url=endpoint),
-                S3BlobStore(os.environ["PAWMATCH_BUCKET"], endpoint_url=endpoint))
+        return (DynamoPostStore(os.environ["PAWMATCH_TABLE"],
+                                endpoint_url=os.environ.get("PAWMATCH_DYNAMODB_ENDPOINT")),
+                S3BlobStore(os.environ["PAWMATCH_BUCKET"],
+                            endpoint_url=os.environ.get("PAWMATCH_S3_ENDPOINT")))
     from src.api.db import Database
 
     return Database(data_dir / "app.db"), LocalBlobStore(data_dir)

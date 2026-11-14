@@ -67,34 +67,44 @@ def moderate_post(db: PostStore, blobs: BlobStore, pipe: ModerationPipeline,
 
 
 def reevaluate_all(db: PostStore, blobs: BlobStore, pipe: ModerationPipeline,
-                   limit: int = 100_000) -> dict:
+                   limit: int = 100_000, after_id: int = 0,
+                   max_posts: int | None = None) -> dict:
     """Re-run moderation on live posts after a model update.
 
     Safety rules: only *tightens* (published -> review/rejected, review -> rejected); never
     loosens, and never touches posts a person already decided on (``human_reviewed``).
     Rejected posts are left alone. Changes are returned for auditing.
+
+    Chunking (for Lambda's 15-minute limit): posts are processed in ascending id order,
+    starting after ``after_id``, at most ``max_posts`` per call. ``next_after_id`` is the
+    cursor for the next call, or ``None`` when everything has been processed.
     """
-    summary = {"checked": 0, "skipped_human": 0, "unchanged": 0, "tightened": [], "errors": []}
-    for status in ("published", "review"):
-        for post in db.list_posts(status, limit=limit):
-            if post["human_reviewed"]:
-                summary["skipped_human"] += 1
-                continue
-            summary["checked"] += 1
-            try:
-                decision, shown = run_moderation(post, blobs, pipe)
-            except Exception as e:  # noqa: BLE001
-                summary["errors"].append({"id": post["id"], "error": type(e).__name__})
-                continue
-            new = STATUS_OF[decision.verdict]
-            if SEVERITY[new] > SEVERITY[post["status"]]:
-                buf = io.BytesIO()
-                Image.fromarray(shown).save(buf, "JPEG", quality=90)
-                blobs.put(public_key(post["id"]), buf.getvalue())
-                db.set_moderation(post["id"], new, list(decision.reasons),
-                                  decision.extra.get("species"))
-                summary["tightened"].append({"id": post["id"], "from": post["status"],
-                                             "to": new, "reasons": list(decision.reasons)})
-            else:
-                summary["unchanged"] += 1
+    summary: dict = {"checked": 0, "skipped_human": 0, "unchanged": 0, "tightened": [],
+                     "errors": [], "next_after_id": None}
+    posts = [p for status in ("published", "review") for p in db.list_posts(status, limit=limit)]
+    todo = sorted((p for p in posts if p["id"] > after_id), key=lambda p: p["id"])
+    batch = todo if max_posts is None else todo[:max_posts]
+    if max_posts is not None and len(todo) > max_posts:
+        summary["next_after_id"] = batch[-1]["id"]
+    for post in batch:
+        if post["human_reviewed"]:
+            summary["skipped_human"] += 1
+            continue
+        summary["checked"] += 1
+        try:
+            decision, shown = run_moderation(post, blobs, pipe)
+        except Exception as e:  # noqa: BLE001
+            summary["errors"].append({"id": post["id"], "error": type(e).__name__})
+            continue
+        new = STATUS_OF[decision.verdict]
+        if SEVERITY[new] > SEVERITY[post["status"]]:
+            buf = io.BytesIO()
+            Image.fromarray(shown).save(buf, "JPEG", quality=90)
+            blobs.put(public_key(post["id"]), buf.getvalue())
+            db.set_moderation(post["id"], new, list(decision.reasons),
+                              decision.extra.get("species"))
+            summary["tightened"].append({"id": post["id"], "from": post["status"],
+                                         "to": new, "reasons": list(decision.reasons)})
+        else:
+            summary["unchanged"] += 1
     return summary

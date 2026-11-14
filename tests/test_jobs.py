@@ -105,3 +105,21 @@ def test_moderate_post_is_idempotent_and_keeps_human_decisions(env) -> None:
     det.dets = []  # a duplicate event arrives after the model changed
     assert jobs.moderate_post(db, blobs, pipe, pid) == "published"
     assert db.get(pid)["status"] == "published"
+
+
+def test_reevaluate_in_chunks_follows_the_cursor(env) -> None:
+    db, blobs, det, pipe = env
+    ids = [add(db, blobs) for _ in range(5)]
+    for pid in ids:
+        jobs.moderate_post(db, blobs, pipe, pid)
+    det.dets = []
+    seen, cursor, calls = [], 0, 0
+    while True:
+        out = jobs.reevaluate_all(db, blobs, pipe, after_id=cursor, max_posts=2)
+        seen += [c["id"] for c in out["tightened"]]
+        calls += 1
+        cursor = out["next_after_id"]
+        if cursor is None:
+            break
+    assert calls == 3 and seen == ids  # each post handled exactly once, in id order
+    assert all(db.get(i)["status"] == "rejected" for i in ids)

@@ -1,5 +1,8 @@
 .venv
-data/oxford-iiit-pet
+data
 runs
+infra/terraform/.terraform
 .git
 __pycache__
+.pytest_cache
+.ruff_cache

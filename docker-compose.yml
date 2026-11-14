@@ -1,20 +1,64 @@
 # CPU by default (works without a GPU). Language: PAWMATCH_LANG=en|ja
+x-aws-local: &aws-local
+  PAWMATCH_STORAGE: aws
+  PAWMATCH_BUCKET: pawmatch-local
+  PAWMATCH_TABLE: pawmatch-posts
+  PAWMATCH_S3_ENDPOINT: http://minio:9000
+  PAWMATCH_DYNAMODB_ENDPOINT: http://dynamodb:8000
+  AWS_ACCESS_KEY_ID: minioadmin # local emulators only; never reuse for real AWS
+  AWS_SECRET_ACCESS_KEY: minioadmin
+  AWS_DEFAULT_REGION: us-east-1
+
 services:
   prepare:
     build: .
     command: ["prepare-data"]
-    environment: [PAWMATCH_LANG=${PAWMATCH_LANG:-en}]
+    environment: ["PAWMATCH_LANG=${PAWMATCH_LANG:-en}"]
     volumes: ["./data:/app/data"]
+
   train:
     build: .
     command: ["train", "--config", "configs/classification.yaml"]
-    environment: [PAWMATCH_LANG=${PAWMATCH_LANG:-en}]
+    environment: ["PAWMATCH_LANG=${PAWMATCH_LANG:-en}"]
     volumes: ["./data:/app/data", "./runs:/app/runs", "./configs:/app/configs"]
+
   app:
-    # Demo web app (no authentication). Needs trained weights: set the run paths in
-    # configs/pipeline.yaml; ./runs is mounted read-only.
+    # Demo web app, SQLite + local files (no authentication). Needs trained weights: set the
+    # run paths in configs/pipeline.yaml; ./runs is mounted read-only.
     build: .
     command: ["serve", "--host", "0.0.0.0", "--port", "8000"]
-    environment: [PAWMATCH_LANG=${PAWMATCH_LANG:-en}]
+    environment: ["PAWMATCH_LANG=${PAWMATCH_LANG:-en}"]
     ports: ["127.0.0.1:8000:8000"]
     volumes: ["./data:/app/data", "./runs:/app/runs:ro", "./configs:/app/configs"]
+
+  # --- `docker compose --profile minio up`: the AWS code path, locally -------------------
+  # S3 -> MinIO, DynamoDB -> DynamoDB Local, Lambda+ECS -> FastAPI background task.
+  minio:
+    profiles: [minio]
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+
+  dynamodb:
+    profiles: [minio]
+    image: amazon/dynamodb-local:latest
+    command: -jar DynamoDBLocal.jar -inMemory -sharedDb
+
+  init-aws-local:
+    profiles: [minio]
+    build: .
+    entrypoint: ["uv", "run", "--no-sync", "python", "scripts/init_local_aws.py"]
+    environment: *aws-local
+    volumes: ["./scripts:/app/scripts:ro"]
+    depends_on: [minio, dynamodb]
+
+  app-minio:
+    profiles: [minio]
+    build: .
+    command: ["serve", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      <<: *aws-local
+      PAWMATCH_LANG: ${PAWMATCH_LANG:-en}
+    ports: ["127.0.0.1:8001:8000"]
+    volumes: ["./runs:/app/runs:ro", "./configs:/app/configs"]
+    depends_on: [init-aws-local]

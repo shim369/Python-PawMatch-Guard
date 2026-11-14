@@ -82,7 +82,7 @@ def load_pipeline_from_env(default: Path = Path("configs/pipeline.yaml")) -> Mod
     from .weights import sync_weights
 
     bucket = os.environ.get("PAWMATCH_MODEL_BUCKET") or os.environ["PAWMATCH_BUCKET"]
-    blobs = S3BlobStore(bucket, endpoint_url=os.environ.get("PAWMATCH_AWS_ENDPOINT"))
+    blobs = S3BlobStore(bucket, endpoint_url=os.environ.get("PAWMATCH_S3_ENDPOINT"))
     cfg = sync_weights(blobs, prefix, Path(tempfile.mkdtemp(prefix="weights-")),
                        Path("configs/moderation.yaml"))
     return load_pipeline(cfg)
