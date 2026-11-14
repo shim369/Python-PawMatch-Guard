@@ -5,7 +5,7 @@
 A pet-adoption matching app with an **AI moderation pipeline** for user posts. Matching is kept light; the showcase is the image/video review pipeline: classification, detection and segmentation models decide *publish / needs review / reject*, and anything uncertain goes to a human.
 
 
-> Status: **Phase 1 (classification + evaluation foundation) implemented.** Phases 2–4 are planned (see below).
+> Status: **Phases 1–3 implemented** (classification, segmentation, detection, annotation QA, moderation pipeline, web app). **Phase 4 is partial**: ONNX/quantization benchmark done; the AWS design is written and validated but **not deployed**. Face / plate / text detection is not trained yet. See *Results* and the known limitations below.
 
 ## Screenshots
 
