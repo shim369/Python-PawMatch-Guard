@@ -4,6 +4,11 @@
 
 犬猫の里親マッチングアプリに、投稿の **AI審査(コンテンツモデレーション)** を組み込んだポートフォリオです。マッチングは軽めにし、見せ場は画像・動画の審査パイプラインに置いています。分類・検出・セグメンテーションの3モデルで「公開可 / 要確認 / 却下」を判定し、迷うものは人の確認に回します。
 
+<p align="center">
+  <img src="docs/images/web-light.jpg" alt="Browse page, light theme" width="49%">
+  <img src="docs/images/web-dark.jpg" alt="Browse page, dark theme" width="49%">
+</p>
+
 > 状況: **フェーズ1(分類と評価の土台)を実装済み。** フェーズ2〜4は計画中です(下記)。
 
 ## 機能(フェーズ1)

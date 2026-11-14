@@ -4,6 +4,11 @@
 
 A pet-adoption matching app with an **AI moderation pipeline** for user posts. Matching is kept light; the showcase is the image/video review pipeline: classification, detection and segmentation models decide *publish / needs review / reject*, and anything uncertain goes to a human.
 
+<p align="center">
+  <img src="docs/images/web-light.jpg" alt="Browse page, light theme" width="49%">
+  <img src="docs/images/web-dark.jpg" alt="Browse page, dark theme" width="49%">
+</p>
+
 > Status: **Phase 1 (classification + evaluation foundation) implemented.** Phases 2–4 are planned (see below).
 
 ## Features (Phase 1)
