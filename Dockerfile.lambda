@@ -1,0 +1,12 @@
+# Lambda container image for moderation (S3 trigger + re-evaluation). Build for arm64
+# (Graviton): `docker build --platform linux/arm64 -f Dockerfile.lambda -t pawmatch-lambda .`
+# Weights are NOT baked in; the function downloads them from s3://<bucket>/models/ on cold start.
+FROM public.ecr.aws/lambda/python:3.12
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+WORKDIR ${LAMBDA_TASK_ROOT}
+COPY pyproject.toml uv.lock README.md ./
+RUN uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt \
+    && uv pip install --system --no-cache -r /tmp/requirements.txt
+COPY src ./src
+COPY configs ./configs
+CMD ["src.aws_lambda.handler"]

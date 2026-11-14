@@ -42,8 +42,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
 # --- DynamoDB: posts (same schema as src/storage/dynamo.py:create_table) ---------------
 resource "aws_dynamodb_table" "posts" {
   name         = "${var.project}-posts"
-  billing_mode = "PAY_PER_REQUEST" # no cost while idle
+  billing_mode = "PROVISIONED" # on-demand tables get NO free read/write capacity
   hash_key     = "id"
+
+  # Always-free tier: 25 provisioned WCU + 25 RCU per account and region, shared by all
+  # tables. 5+5 for the table and 5+5 for the index uses 10 of each.
+  read_capacity  = 5
+  write_capacity = 5
 
   attribute {
     name = "id"
@@ -59,10 +64,13 @@ resource "aws_dynamodb_table" "posts" {
     hash_key        = "status"
     range_key       = "id"
     projection_type = "ALL"
+    read_capacity   = 5
+    write_capacity  = 5
   }
 }
 
-# --- ECR: worker image; keep only the latest few ---------------------------------------
+# --- ECR: Lambda image. Free storage is 500 MB for the first 12 months only; a PyTorch image
+# is larger than that, so expect about $0.10 per GB-month. Keep only one image to limit it.
 resource "aws_ecr_repository" "worker" {
   name                 = "${var.project}-worker"
   image_tag_mutability = "MUTABLE"
@@ -75,8 +83,8 @@ resource "aws_ecr_lifecycle_policy" "worker" {
   policy = jsonencode({
     rules = [{
       rulePriority = 1
-      description  = "Keep the last 5 images"
-      selection    = { tagStatus = "any", countType = "imageCountMoreThan", countNumber = 5 }
+      description  = "Keep only the latest image"
+      selection    = { tagStatus = "any", countType = "imageCountMoreThan", countNumber = 1 }
       action       = { type = "expire" }
     }]
   })

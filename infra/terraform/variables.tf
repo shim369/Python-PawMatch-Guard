@@ -9,31 +9,31 @@ variable "region" {
 }
 
 variable "image_tag" {
-  description = "Tag of the worker image in ECR. Build for the architecture below."
+  description = "Tag of the Lambda container image in ECR."
   type        = string
   default     = "latest"
 }
 
-variable "cpu_architecture" {
-  description = "X86_64 or ARM64. Must match the architecture the image was built for."
+variable "lambda_architecture" {
+  description = "arm64 (Graviton) or x86_64; must match how the image was built."
   type        = string
-  default     = "X86_64"
+  default     = "arm64"
 }
 
-variable "worker_cpu" {
-  type    = number
-  default = 2048
-}
-
-variable "worker_memory" {
-  type    = number
-  default = 4096
-}
-
-variable "batch_max_vcpus" {
-  description = "Upper bound on the re-evaluation job fleet (cost guard)."
+variable "lambda_memory_mb" {
+  description = "More memory = more CPU but more GB-seconds per post (free tier: 400,000 GB-s/month)."
   type        = number
-  default     = 4
+  default     = 3072
+}
+
+variable "alert_email" {
+  description = "Receives a warning when monthly cost approaches the budget."
+  type        = string
+}
+
+variable "monthly_budget_usd" {
+  type    = number
+  default = 1
 }
 
 variable "upload_ia_days" {
