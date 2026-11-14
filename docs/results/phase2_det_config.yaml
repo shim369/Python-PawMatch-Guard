@@ -1,0 +1,9 @@
+seed: 42
+data_root: data
+split_csv: data/splits/oxford_pet_seed42.csv
+output_dir: runs
+min_size: 384        # shorter side after internal resize
+batch_size: 8
+num_workers: 2
+epochs: 3
+lr: 0.01

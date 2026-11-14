@@ -54,6 +54,12 @@ def _train_seg(args: argparse.Namespace) -> None:
     run(Path(args.config))
 
 
+def _train_det(args: argparse.Namespace) -> None:
+    from src.models.detection import run
+
+    run(Path(args.config))
+
+
 def _noise(args: argparse.Namespace) -> None:
     from src.quality.noise_experiment import main as run_noise
 
@@ -84,6 +90,10 @@ def main(argv: list[str] | None = None) -> None:
     sp = sub.add_parser("train-seg", help=t("cli.train_seg"))
     sp.add_argument("--config", default="configs/segmentation.yaml")
     sp.set_defaults(fn=_train_seg)
+
+    sp = sub.add_parser("train-det", help=t("cli.train_det"))
+    sp.add_argument("--config", default="configs/detection.yaml")
+    sp.set_defaults(fn=_train_det)
 
     sp = sub.add_parser("detect-noise", help=t("cli.noise"))
     sp.add_argument("run_dir")
