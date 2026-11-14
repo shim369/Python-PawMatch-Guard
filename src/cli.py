@@ -71,7 +71,7 @@ def _serve(args: argparse.Namespace) -> None:
 def _eval_moderation(args: argparse.Namespace) -> None:
     from src.moderation.evaluate import main as run_eval
 
-    run_eval(args.config, args.out, args.negatives, args.limit)
+    run_eval(args.config, args.out, args.negatives, args.limit, args.negatives_split)
 
 
 def _benchmark(args: argparse.Namespace) -> None:
@@ -143,6 +143,8 @@ def main(argv: list[str] | None = None) -> None:
     sp.add_argument("--config", default="configs/pipeline.yaml")
     sp.add_argument("--out", default="docs/results/moderation_eval.json")
     sp.add_argument("--negatives", default=None, help="folder of photos without animals")
+    sp.add_argument("--negatives-split", default=None,
+                    help="CSV from split_negatives; evaluate only its held-out test half")
     sp.add_argument("--limit", type=int, default=None)
     sp.set_defaults(fn=_eval_moderation)
 

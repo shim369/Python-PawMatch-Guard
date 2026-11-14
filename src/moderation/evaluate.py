@@ -29,7 +29,8 @@ EXPECTED = {"normal": Verdict.PUBLISH, "mismatch": Verdict.REVIEW, "negative": V
 
 
 def evaluate(pipe: ModerationPipeline, data_root: Path, split_csv: Path,
-             negatives_dir: Path | None = None, limit: int | None = None) -> dict:
+             negatives_dir: Path | None = None, limit: int | None = None,
+             negative_ids: set[str] | None = None) -> dict:
     root = data_root / DATASET_DIR / "images"
     entries = read_split_csv(split_csv)["test"][:limit]
     cases: list[tuple[str, str, str, Verdict]] = []  # (kind, id, expected-name, verdict)
@@ -43,7 +44,8 @@ def evaluate(pipe: ModerationPipeline, data_root: Path, split_csv: Path,
     n_neg = 0
     if negatives_dir and negatives_dir.exists():
         for p in sorted(negatives_dir.glob("*")):
-            if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp"):
+            if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp") and (
+                    negative_ids is None or p.stem in negative_ids):
                 img = np.asarray(Image.open(p).convert("RGB"))
                 cases.append(("negative", p.name, "", pipe.analyze(img, "cat").verdict))
                 n_neg += 1
@@ -70,11 +72,17 @@ def evaluate(pipe: ModerationPipeline, data_root: Path, split_csv: Path,
     }
 
 
-def main(config: str, out: str, negatives: str | None, limit: int | None) -> None:
+def main(config: str, out: str, negatives: str | None, limit: int | None,
+         negatives_split: str | None = None) -> None:
+    from src.data.negatives import read_negatives_split
+
     from .torch_models import load_pipeline
+
+    held_out = (set(read_negatives_split(Path(negatives_split))["test"])
+                if negatives_split else None)
 
     res = evaluate(load_pipeline(Path(config)), Path("data"),
                    Path("data/splits/oxford_pet_seed42.csv"),
-                   Path(negatives) if negatives else None, limit)
+                   Path(negatives) if negatives else None, limit, held_out)
     Path(out).write_text(json.dumps(res, indent=2))
     print(json.dumps(res, indent=2))

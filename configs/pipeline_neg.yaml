@@ -1,0 +1,4 @@
+# Same as pipeline.yaml but with the detector trained with negatives (configs/detection_neg.yaml).
+classifier_run: runs/20261113-074911
+detector_run: runs/det-20261115-004012
+thresholds: configs/moderation.yaml

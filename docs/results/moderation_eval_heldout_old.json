@@ -1,0 +1,128 @@
+{
+  "n_cases": 2358,
+  "n_images": 1104,
+  "n_negatives": 150,
+  "labels": [
+    "PUBLISH",
+    "REVIEW",
+    "REJECT"
+  ],
+  "confusion_matrix_rows_expected_cols_actual": [
+    [
+      1089,
+      12,
+      3
+    ],
+    [
+      4,
+      1097,
+      3
+    ],
+    [
+      15,
+      44,
+      91
+    ]
+  ],
+  "by_kind": {
+    "normal": {
+      "publish": 1089,
+      "review": 12,
+      "reject": 3,
+      "n": 1104
+    },
+    "mismatch": {
+      "publish": 4,
+      "review": 1097,
+      "reject": 3,
+      "n": 1104
+    },
+    "negative": {
+      "publish": 15,
+      "review": 44,
+      "reject": 91,
+      "n": 150
+    }
+  },
+  "human_review_rate": 0.48897370653095845,
+  "miss_count": 19,
+  "miss_examples": [
+    [
+      "mismatch",
+      "Bombay_29"
+    ],
+    [
+      "mismatch",
+      "Sphynx_57"
+    ],
+    [
+      "mismatch",
+      "scottish_terrier_119"
+    ],
+    [
+      "mismatch",
+      "scottish_terrier_3"
+    ],
+    [
+      "negative",
+      "017b690dbb7552db.jpg"
+    ],
+    [
+      "negative",
+      "043f3655deab6e7c.jpg"
+    ],
+    [
+      "negative",
+      "07d897eacf63e840.jpg"
+    ],
+    [
+      "negative",
+      "0f48108b3973c7ec.jpg"
+    ],
+    [
+      "negative",
+      "1421f2633f880b2a.jpg"
+    ],
+    [
+      "negative",
+      "1fd97b32298d03ae.jpg"
+    ],
+    [
+      "negative",
+      "25f91afe0f75cba2.jpg"
+    ],
+    [
+      "negative",
+      "2ce8aea35a405d83.jpg"
+    ],
+    [
+      "negative",
+      "63d3df798bc8840f.jpg"
+    ],
+    [
+      "negative",
+      "84c84a67ecce7f0b.jpg"
+    ],
+    [
+      "negative",
+      "852bbc279ed0be82.jpg"
+    ],
+    [
+      "negative",
+      "87a52aad8e5ad2bf.jpg"
+    ],
+    [
+      "negative",
+      "91a42cd50669eb1f.jpg"
+    ],
+    [
+      "negative",
+      "a7197d4c4d02c789.jpg"
+    ],
+    [
+      "negative",
+      "b7062525895bdac2.jpg"
+    ]
+  ],
+  "note": "includes negatives"
+}

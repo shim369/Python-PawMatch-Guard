@@ -1,0 +1,14 @@
+# Detector trained with no-animal negatives (see README, Phase 3 limitations).
+seed: 42
+data_root: data
+split_csv: data/splits/oxford_pet_seed42.csv
+output_dir: runs
+min_size: 384
+batch_size: 8
+num_workers: 2
+epochs: 3
+lr: 0.01
+negatives:
+  images_dir: data/negatives
+  split_csv: data/splits/negatives_split.csv
+  repeat: 3          # 150 train negatives x3 ~ 15% of each epoch
