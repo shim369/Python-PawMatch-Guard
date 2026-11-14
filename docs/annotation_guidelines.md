@@ -15,6 +15,8 @@ Version 1.0 · Tool: Label Studio · Format: axis-aligned boxes `[x1, y1, x2, y2
 Class IDs are fixed; `check-annotations` rejects IDs outside 0–3.
 クラスIDは固定です。0〜3以外はチェックで弾かれます。
 
+> **Note / 注意:** the public Oxford-IIIT Pet boxes used to bootstrap the detector cover the animal's *head* only, so the current `animal_head` detector differs from the whole-animal `animal` class defined here. 公開データの矩形は頭部のみで、現在の検出器は本ガイドラインの全身 `animal` とは異なります。
+
 ## Box rules / 矩形の付け方
 
 1. **Tight box.** Touch the outermost visible pixel of the object; do not add margin.

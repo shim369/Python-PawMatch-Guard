@@ -27,6 +27,7 @@ uv run pawmatch prepare-data --source hf
 uv run pawmatch train                 # uses configs/classification.yaml
 uv run pawmatch report runs/<run_dir> # print test metrics
 uv run pawmatch train-seg             # segmentation (configs/segmentation.yaml)
+uv run pawmatch train-det             # animal-head detector (configs/detection.yaml)
 uv run pawmatch detect-noise runs/<run_dir>  # 5% label-noise experiment
 ```
 
@@ -106,12 +107,20 @@ The model itself is wrong on 8.5 % of clean labels, which is why "disagree" flag
 
 **Preprocessing-bug experiments:** see [`docs/debugging.md`](docs/debugging.md). Main finding: three injected bugs moved IoU by only 0.1–1.7 pt (within plausible noise); the mask-resize bug showed up as a 34 % drop in *boundary* IoU.
 
-**Not done yet in Phase 2:** object detection (Faster R-CNN) and the custom face/plate/text annotations in Label Studio, so no mAP is reported yet. The metric code (IoU, AP@0.5, mAP@0.5:0.95, per-class recall) is implemented and matches torchmetrics/pycocotools.
+**Object detection** (Faster R-CNN MobileNetV3-FPN, COCO-pretrained, 3 epochs, one class `animal_head`, test = 571 images with boxes, own metrics):
+
+| AP@0.5 | mAP@0.5:0.95 | Recall@IoU0.5 | Images with a detection (score ≥ 0.5) |
+|---|---|---|---|
+| 0.988 | 0.723 | 0.993 | 0.991 |
+
+Caveats: (1) Oxford's boxes cover the animal's **head** only and only ~3.7k images have them (train 2,551 / val 549 / test 571), so this is a head detector used as a proxy for "an animal is visible". (2) Every test image contains a pet, so the numbers say nothing about false positives on photos *without* animals, which matters for moderation rule 1 ("no animal → reject"); that needs negative images. (3) The photos are pet-centred, so AP@0.5 is near its ceiling; mAP@0.5:0.95 (0.72) is the more informative number. (4) Face / plate / text classes need the custom Label Studio annotations and are not trained yet. Single run. Files: [`docs/results/phase2_det_metrics.json`](docs/results/phase2_det_metrics.json).
+
+**Not done yet in Phase 2:** the custom face/plate/text annotations in Label Studio and the detector classes that depend on them. The metric code (IoU, AP@0.5, mAP@0.5:0.95, per-class recall) matches torchmetrics/pycocotools.
 
 ## Roadmap
 
 1. Classification & evaluation foundation ✅ (code), results below
-2. Segmentation ✅, annotation QA ✅ (guidelines, checks, noise detection), debugging log ✅; detection model and Label Studio annotation pending
+2. Segmentation ✅, annotation QA ✅ (guidelines, checks, noise detection), debugging log ✅; animal-head detector ✅; Label Studio annotation of face/plate/text pending
 3. Moderation pipeline, video (ffmpeg), FastAPI app
 4. AWS (S3 → Lambda → ECS, Batch re-evaluation), ONNX + quantization
 

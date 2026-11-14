@@ -27,6 +27,7 @@ uv run pawmatch prepare-data --source hf
 uv run pawmatch train                 # configs/classification.yaml を使用
 uv run pawmatch report runs/<run_dir> # テスト指標を表示
 uv run pawmatch train-seg             # セグメンテーション(configs/segmentation.yaml)
+uv run pawmatch train-det             # 動物の頭部検出(configs/detection.yaml)
 uv run pawmatch detect-noise runs/<run_dir>  # ラベル5%入れ替え実験
 ```
 
@@ -106,12 +107,20 @@ F1が低い品種: staffordshire_bull_terrier 0.71、beagle 0.79、american_pit_
 
 **前処理バグの実験:** [`docs/debugging.md`](docs/debugging.md) 参照。仕込んだ3つのバグでIoUは0.1〜1.7ポイントしか動かず(ノイズの範囲内)、マスクのリサイズバグだけが*境界*IoUの34%低下として現れました。
 
-**フェーズ2で未実施:** 物体検出(Faster R-CNN)と、Label Studioでの顔・ナンバー・文字の自作アノテーションです。そのためmAPはまだ報告していません。指標(IoU、AP@0.5、mAP@0.5:0.95、クラス別Recall)の実装は完了しており、torchmetrics/pycocotoolsと一致しています。
+**物体検出**(Faster R-CNN MobileNetV3-FPN、COCO事前学習、3エポック、クラスは`animal_head`の1つ、テストは矩形のある571枚、自前指標):
+
+| AP@0.5 | mAP@0.5:0.95 | Recall@IoU0.5 | 検出あり画像の割合(スコア0.5以上) |
+|---|---|---|---|
+| 0.988 | 0.723 | 0.993 | 0.991 |
+
+注意: (1) Oxfordの矩形は動物の**頭部**のみで、矩形がある画像も約3.7千枚(train 2,551 / val 549 / test 571)です。そのため「動物が写っている」の代理としての頭部検出器です。(2) テスト画像はすべてペットが写っているので、動物のいない写真での誤検知は分かりません。審査ルール1(動物なし→却下)には、動物のいない画像(ネガティブ)での評価が別途必要です。(3) ペット中心の写真なのでAP@0.5は上限に近く、mAP@0.5:0.95(0.72)のほうが情報があります。(4) 顔・ナンバー・文字クラスはLabel Studioでの自作アノテーションが必要で、未学習です。1回のみの実行。ファイル: [`docs/results/phase2_det_metrics.json`](docs/results/phase2_det_metrics.json)
+
+**フェーズ2で未実施:** Label Studioでの顔・ナンバー・文字の自作アノテーションと、それに依存する検出クラスです。指標(IoU、AP@0.5、mAP@0.5:0.95、クラス別Recall)はtorchmetrics/pycocotoolsと一致しています。
 
 ## ロードマップ
 
 1. 分類と評価の土台 ✅(コード完了、結果は下記)
-2. セグメンテーション ✅、アノテーション品質管理 ✅(ガイドライン、チェック、ノイズ検出)、デバッグ記録 ✅。検出モデルとLabel Studioでのアノテーションは未実施
+2. セグメンテーション ✅、アノテーション品質管理 ✅(ガイドライン、チェック、ノイズ検出)、デバッグ記録 ✅。動物の頭部検出 ✅。顔・ナンバー・文字のLabel Studioアノテーションは未実施
 3. 審査パイプライン、動画(ffmpeg)、FastAPIアプリ
 4. AWS(S3 → Lambda → ECS、Batchで一括再評価)、ONNX化と量子化
 
