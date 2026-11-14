@@ -1,0 +1,5 @@
+# Thresholds for src/moderation/rules.py. Tune on the validation set; see README.
+animal_reject: 0.30
+animal_ok: 0.50
+pii_blur_min: 0.30
+pii_confident: 0.60
