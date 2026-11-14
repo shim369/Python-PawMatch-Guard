@@ -129,3 +129,27 @@ def test_pages_render_in_both_languages_and_escape_html(env) -> None:
     assert "さがす" in ja and 'lang="ja"' in ja
     assert "確認キュー" in c.get("/review?lang=ja").text
     assert c.get("/submit").status_code == 200
+
+
+def test_full_flow_on_aws_backends(tmp_path) -> None:
+    """The same app, wired to DynamoDB + S3 (moto), behaves identically."""
+    import boto3
+    from moto import mock_aws
+
+    from src.storage.blobs import S3BlobStore
+    from src.storage.dynamo import DynamoPostStore, create_table
+
+    with mock_aws():
+        create_table(boto3.client("dynamodb", region_name="us-east-1"), "posts")
+        s3 = boto3.client("s3", region_name="us-east-1")
+        s3.create_bucket(Bucket="bkt")
+        app = create_app(
+            lambda: ModerationPipeline(FakeDetector(), FakeClassifier()), tmp_path,
+            db=DynamoPostStore("posts", boto3.resource("dynamodb", region_name="us-east-1")),
+            blobs=S3BlobStore("bkt", client=s3))
+        c = TestClient(app)
+        pid = post(c).json()["id"]
+        assert c.get(f"/api/posts/{pid}").json()["status"] == "published"
+        assert c.get(f"/media/{pid}").status_code == 200
+        assert s3.head_object(Bucket="bkt", Key=f"uploads/{pid}.png")
+        assert [p["id"] for p in c.get("/api/posts").json()] == [pid]

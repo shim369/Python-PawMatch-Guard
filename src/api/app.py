@@ -5,6 +5,8 @@ Demo notes: there is no authentication; the review queue is open. Do not expose 
 
 from __future__ import annotations
 
+import io
+import mimetypes
 import tempfile
 from collections.abc import Callable
 from functools import lru_cache
@@ -12,7 +14,7 @@ from pathlib import Path
 
 import numpy as np
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from PIL import Image
 from pydantic import BaseModel
@@ -20,8 +22,8 @@ from pydantic import BaseModel
 from src.i18n import SUPPORTED, get_lang, t
 from src.moderation.pipeline import ModerationPipeline
 from src.moderation.rules import Verdict
-
-from .db import Database
+from src.storage.base import BlobStore, PostStore
+from src.storage.factory import from_env
 
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 VIDEO_EXT = {".mp4", ".mov", ".webm"}
@@ -35,12 +37,14 @@ class ReviewBody(BaseModel):
 
 
 def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
-               data_dir: Path = Path("data/app")) -> FastAPI:
+               data_dir: Path = Path("data/app"), db: PostStore | None = None,
+               blobs: BlobStore | None = None) -> FastAPI:
     app = FastAPI(title="PawMatch Guard")
-    db = Database(data_dir / "app.db")
-    uploads, public = data_dir / "uploads", data_dir / "public"
-    uploads.mkdir(parents=True, exist_ok=True)
-    public.mkdir(parents=True, exist_ok=True)
+    if db is None or blobs is None:
+        env_db, env_blobs = from_env(data_dir)
+        db, blobs = db or env_db, blobs or env_blobs
+    upload_key = lambda pid, ext: f"uploads/{pid}{ext}"  # noqa: E731
+    public_key = lambda pid: f"public/{pid}.jpg"  # noqa: E731
 
     if pipeline_factory is None:
         def pipeline_factory() -> ModerationPipeline:
@@ -74,17 +78,22 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
         post = db.get(post_id)
         if post is None:
             return
-        src = uploads / f"{post_id}{post['ext']}"
         try:
             pipe = get_pipeline()
+            raw = blobs.get(upload_key(post_id, post["ext"]))
             if post["media_type"] == "image":
-                img = np.asarray(Image.open(src).convert("RGB"))
+                img = np.asarray(Image.open(io.BytesIO(raw)).convert("RGB"))
                 res, shown = pipe.moderate_image(img, post["declared_species"])
             else:
                 with tempfile.TemporaryDirectory() as tmp:
-                    res = pipe.moderate_video(src, Path(tmp), post["declared_species"])
+                    src = Path(tmp) / f"video{post['ext']}"
+                    src.write_bytes(raw)
+                    res = pipe.moderate_video(src, Path(tmp) / "frames",
+                                              post["declared_species"])
                 shown = res.thumbnail
-            Image.fromarray(shown).save(public / f"{post_id}.jpg", quality=90)
+            buf = io.BytesIO()
+            Image.fromarray(shown).save(buf, "JPEG", quality=90)
+            blobs.put(public_key(post_id), buf.getvalue())
             d = res.decision
             db.set_moderation(post_id, STATUS_OF[d.verdict], list(d.reasons),
                               d.extra.get("species"))
@@ -107,7 +116,7 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
         if len(data) > MAX_BYTES[kind]:
             raise HTTPException(413, "file too large")
         post_id = db.create_post(title.strip(), description.strip(), species, kind, ext)
-        (uploads / f"{post_id}{ext}").write_bytes(data)  # name from id, never from user input
+        blobs.put(upload_key(post_id, ext), data)  # key from id, never from user input
         background.add_task(moderate, post_id)
         return {"id": post_id, "status": "pending"}
 
@@ -142,21 +151,22 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
         post = db.get(post_id)
         if post is None or post["status"] != "published":
             raise HTTPException(404)
-        return FileResponse(public / f"{post_id}.jpg", media_type="image/jpeg")
+        return Response(blobs.get(public_key(post_id)), media_type="image/jpeg")
 
     @app.get("/media/{post_id}/video")
     def video(post_id: int):
         post = db.get(post_id)
         if post is None or post["status"] != "published" or post["media_type"] != "video":
             raise HTTPException(404)
-        return FileResponse(uploads / f"{post_id}{post['ext']}")
+        mime = mimetypes.guess_type(f"x{post['ext']}")[0] or "application/octet-stream"
+        return Response(blobs.get(upload_key(post_id, post["ext"])), media_type=mime)
 
     @app.get("/review/media/{post_id}")
     def review_media(post_id: int):
         post = db.get(post_id)
         if post is None or post["status"] != "review":
             raise HTTPException(404)
-        return FileResponse(public / f"{post_id}.jpg", media_type="image/jpeg")
+        return Response(blobs.get(public_key(post_id)), media_type="image/jpeg")
 
     # ---- pages -------------------------------------------------------------------------
     @app.get("/")
