@@ -3,10 +3,10 @@ x-aws-local: &aws-local
   PAWMATCH_STORAGE: aws
   PAWMATCH_BUCKET: pawmatch-local
   PAWMATCH_TABLE: pawmatch-posts
-  PAWMATCH_S3_ENDPOINT: http://minio:9000
+  PAWMATCH_S3_ENDPOINT: http://s3:8333
   PAWMATCH_DYNAMODB_ENDPOINT: http://dynamodb:8000
-  AWS_ACCESS_KEY_ID: minioadmin # local emulators only; never reuse for real AWS
-  AWS_SECRET_ACCESS_KEY: minioadmin
+  AWS_ACCESS_KEY_ID: local # emulators only; never reuse for real AWS
+  AWS_SECRET_ACCESS_KEY: local
   AWS_DEFAULT_REGION: us-east-1
 
 services:
@@ -31,29 +31,31 @@ services:
     ports: ["127.0.0.1:8000:8000"]
     volumes: ["./data:/app/data", "./runs:/app/runs:ro", "./configs:/app/configs"]
 
-  # --- `docker compose --profile minio up`: the AWS code path, locally -------------------
-  # S3 -> MinIO, DynamoDB -> DynamoDB Local, Lambda+ECS -> FastAPI background task.
-  minio:
-    profiles: [minio]
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+  # --- `docker compose --profile aws-local up`: the AWS code path, locally --------------
+  # S3 -> SeaweedFS (MinIO's official images are no longer pullable), DynamoDB -> DynamoDB
+  # Local, Lambda -> FastAPI background task.
+  s3:
+    profiles: [aws-local]
+    image: chrislusf/seaweedfs:latest
+    command: server -s3 -dir=/data
+    ports: ["127.0.0.1:8333:8333"]
 
   dynamodb:
-    profiles: [minio]
+    profiles: [aws-local]
     image: amazon/dynamodb-local:latest
     command: -jar DynamoDBLocal.jar -inMemory -sharedDb
+    ports: ["127.0.0.1:8002:8000"]
 
   init-aws-local:
-    profiles: [minio]
+    profiles: [aws-local]
     build: .
     entrypoint: ["uv", "run", "--no-sync", "python", "scripts/init_local_aws.py"]
     environment: *aws-local
     volumes: ["./scripts:/app/scripts:ro"]
-    depends_on: [minio, dynamodb]
+    depends_on: [s3, dynamodb]
 
-  app-minio:
-    profiles: [minio]
+  app-aws-local:
+    profiles: [aws-local]
     build: .
     command: ["serve", "--host", "0.0.0.0", "--port", "8000"]
     environment:

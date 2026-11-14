@@ -1,4 +1,4 @@
-"""Create the MinIO bucket and DynamoDB Local table used by the `minio` compose profile.
+"""Create the S3 bucket (SeaweedFS) and DynamoDB Local table of the `aws-local` profile.
 Idempotent. Reads the same PAWMATCH_* variables as the app."""
 
 import os
