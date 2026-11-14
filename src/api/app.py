@@ -13,6 +13,7 @@ from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
@@ -27,6 +28,9 @@ IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 VIDEO_EXT = {".mp4", ".mov", ".webm"}
 MAX_BYTES = {"image": 25 * 1024 * 1024, "video": 100 * 1024 * 1024}
 TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
+STATIC = Path(__file__).parent / "static"
+# Changes whenever a static file changes, so browsers never keep a stale stylesheet.
+TEMPLATES.env.globals["asset_v"] = int(max(p.stat().st_mtime for p in STATIC.iterdir()))
 
 
 class ReviewBody(BaseModel):
@@ -37,6 +41,7 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
                data_dir: Path = Path("data/app"), db: PostStore | None = None,
                blobs: BlobStore | None = None) -> FastAPI:
     app = FastAPI(title="PawMatch Guard")
+    app.mount("/static", StaticFiles(directory=STATIC), name="static")
     if db is None or blobs is None:
         env_db, env_blobs = from_env(data_dir)
         db, blobs = db or env_db, blobs or env_blobs
@@ -55,10 +60,11 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
     def lang_of(request: Request) -> str:
         return get_lang(request.query_params.get("lang") or request.cookies.get("lang"))
 
-    def page(request: Request, name: str, **ctx):
+    def page(request: Request, name: str, active: str = "", **ctx):
         lang = lang_of(request)
         resp = TEMPLATES.TemplateResponse(request, name, {
-            "t": lambda k, **kw: t(k, lang, **kw), "lang": lang, "langs": SUPPORTED, **ctx})
+            "t": lambda k, **kw: t(k, lang, **kw), "lang": lang, "langs": SUPPORTED,
+            "active": active, "review_count": len(db.list_posts("review")), **ctx})
         resp.set_cookie("lang", lang)
         return resp
 
@@ -155,23 +161,23 @@ def create_app(pipeline_factory: Callable[[], ModerationPipeline] | None = None,
     def home(request: Request, species: str | None = None, q: str | None = None):
         lang = lang_of(request)
         posts = [view(p, lang) for p in db.list_posts("published", species, q)]
-        return page(request, "index.html", posts=posts, species=species or "", q=q or "")
+        return page(request, "index.html", "home", posts=posts, species=species or "", q=q or "")
 
     @app.get("/submit")
     def submit_page(request: Request):
-        return page(request, "submit.html")
+        return page(request, "submit.html", "submit")
 
     @app.get("/post/{post_id}")
     def post_page(request: Request, post_id: int):
         post = db.get(post_id)
         if post is None:
             raise HTTPException(404)
-        return page(request, "post.html", post=view(post, lang_of(request)))
+        return page(request, "post.html", "", post=view(post, lang_of(request)))
 
     @app.get("/review")
     def review_page(request: Request):
         lang = lang_of(request)
-        return page(request, "review.html",
+        return page(request, "review.html", "review",
                     posts=[view(p, lang) for p in db.list_posts("review")])
 
     @app.post("/review/{post_id}")

@@ -1,22 +1,43 @@
-{% extends "base.html" %}{% block body %}
-<form method="get">
- <input name="q" value="{{ q }}" placeholder="{{ t('search.placeholder') }}">
- <select name="species">
-  <option value="">{{ t('filter.all') }}</option>
-  <option value="cat" {{ 'selected' if species == 'cat' }}>{{ t('cat') }}</option>
-  <option value="dog" {{ 'selected' if species == 'dog' }}>{{ t('dog') }}</option>
- </select>
- <button>{{ t('search.button') }}</button>
-</form>
-{% if not posts %}<p class="muted">{{ t('post.empty') }}</p>{% endif %}
-<div class="grid">
-{% for p in posts %}
- <a class="card" href="/post/{{ p.id }}" style="text-decoration:none;color:inherit">
-  <img src="/media/{{ p.id }}" alt="{{ p.title }}">
-  <div><strong>{{ p.title }}</strong><br>
-   <span class="badge">{{ t(p.detected_species or p.species) }}</span>
-   {% if p.media_type == 'video' %}<span class="badge">▶</span>{% endif %}</div>
- </a>
-{% endfor %}
+{% extends "base.html" %}{% from "_macros.html" import icon, card with context %}
+{% block title %}{{ t('nav.home') }}{% endblock %}
+{% block body %}
+<section class="hero">
+  <span class="eyebrow">{{ icon('shield') }} {{ t('hero.eyebrow') }}</span>
+  <h1>{{ t('hero.title_a') }} <em>{{ t('hero.title_b') }}</em></h1>
+  <p class="lead">{{ t('hero.subtitle') }}</p>
+  <form class="search" method="get" role="search">
+    <div class="search-box">
+      {{ icon('search') }}
+      <label class="sr-only" for="q">{{ t('search.placeholder') }}</label>
+      <input class="input" id="q" name="q" value="{{ q }}" placeholder="{{ t('search.placeholder') }}" autocomplete="off">
+      <button class="btn" type="submit">{{ t('search.button') }}</button>
+    </div>
+    <div class="chips" role="radiogroup" aria-label="{{ t('form.species') }}">
+      <label class="chip"><input type="radio" name="species" value="" {{ 'checked' if not species }}><span>{{ t('filter.all') }}</span></label>
+      <label class="chip"><input type="radio" name="species" value="cat" {{ 'checked' if species == 'cat' }}><span>🐱 {{ t('cat') }}</span></label>
+      <label class="chip"><input type="radio" name="species" value="dog" {{ 'checked' if species == 'dog' }}><span>🐶 {{ t('dog') }}</span></label>
+    </div>
+  </form>
+</section>
+
+<section class="steps" aria-label="{{ t('steps.title') }}">
+  <div class="step"><span class="ico">{{ icon('check') }}</span><div><h3>{{ t('steps.1.title') }}</h3><p>{{ t('steps.1.text') }}</p></div></div>
+  <div class="step"><span class="ico">{{ icon('eye') }}</span><div><h3>{{ t('steps.2.title') }}</h3><p>{{ t('steps.2.text') }}</p></div></div>
+  <div class="step"><span class="ico">{{ icon('user') }}</span><div><h3>{{ t('steps.3.title') }}</h3><p>{{ t('steps.3.text') }}</p></div></div>
+</section>
+
+<div class="section-head">
+  <h2>{{ t('list.title') }}</h2>
+  <span class="muted">{{ t('list.count', n=posts|length) }}</span>
 </div>
+{% if posts %}
+<div class="grid">{% for p in posts %}{{ card(p) }}{% endfor %}</div>
+{% else %}
+<div class="empty">
+  <div class="art">{{ icon('paw', 'i') }}</div>
+  <h3>{{ t('post.empty') }}</h3>
+  <p>{{ t('empty.hint') }}</p>
+  <a class="btn" href="/submit">{{ icon('upload') }} {{ t('nav.submit') }}</a>
+</div>
+{% endif %}
 {% endblock %}

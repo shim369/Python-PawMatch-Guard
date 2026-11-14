@@ -1,20 +1,41 @@
-{% extends "base.html" %}{% block body %}
-<h2>{{ t('nav.submit') }}</h2>
-<form id="f">
- <label>{{ t('form.title') }}<br><input name="title" required maxlength="120"></label>
- <label>{{ t('form.description') }}<br><textarea name="description" rows="3" maxlength="2000"></textarea></label>
- <label>{{ t('form.species') }}<br><select name="species"><option value="cat">{{ t('cat') }}</option><option value="dog">{{ t('dog') }}</option></select></label>
- <label>{{ t('form.file') }}<br><input type="file" name="file" accept="image/*,video/*" required></label>
- <button>{{ t('form.submit') }}</button>
-</form>
-<p id="msg" class="muted"></p>
-<script>
-document.getElementById('f').addEventListener('submit', async e => {
-  e.preventDefault();
-  const r = await fetch('/api/posts', {method:'POST', body:new FormData(e.target)});
-  const msg = document.getElementById('msg');
-  if (r.ok) { const j = await r.json(); location.href = '/post/' + j.id; }
-  else { msg.textContent = (await r.json()).detail; }
-});
-</script>
+{% extends "base.html" %}{% from "_macros.html" import icon %}
+{% block title %}{{ t('nav.submit') }}{% endblock %}
+{% block body %}
+<div class="page">
+  <div class="page-head">
+    <h1 style="font-size:clamp(1.8rem,3.6vw,2.6rem)">{{ t('submit.title') }}</h1>
+    <p class="lead">{{ t('submit.subtitle') }}</p>
+  </div>
+  <form id="post-form" class="panel two-col" enctype="multipart/form-data" novalidate>
+    <div>
+      <label class="dropzone" id="dropzone" for="file">
+        <input id="file" type="file" name="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" required>
+        <span class="art">{{ icon('upload') }}</span>
+        <span class="copy"><strong>{{ t('drop.title') }}</strong><br><span class="muted">{{ t('drop.or') }} · {{ t('drop.hint') }}</span></span>
+      </label>
+    </div>
+    <div>
+      <div class="field">
+        <label for="title">{{ t('form.title') }}</label>
+        <input class="input" id="title" name="title" required maxlength="120" placeholder="{{ t('form.title.placeholder') }}">
+      </div>
+      <div class="field">
+        <span class="label" id="sp-label">{{ t('form.species') }}</span>
+        <div class="seg-radio" role="radiogroup" aria-labelledby="sp-label">
+          <label><input type="radio" name="species" value="cat" checked><span>🐱 {{ t('cat') }}</span></label>
+          <label><input type="radio" name="species" value="dog"><span>🐶 {{ t('dog') }}</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="description">{{ t('form.description') }}</label>
+        <textarea class="input" id="description" name="description" maxlength="2000" placeholder="{{ t('form.description.placeholder') }}"></textarea>
+        <div class="hint"><span>{{ t('form.privacy') }}</span><span id="desc-count">0 / 2000</span></div>
+      </div>
+      <div id="form-error" class="form-error" role="alert" hidden data-generic="{{ t('error.generic') }}"></div>
+      <div class="field">
+        <button class="btn block" id="submit-btn" type="submit" data-sending="{{ t('submit.sending') }}">{{ t('form.submit') }}</button>
+      </div>
+    </div>
+  </form>
+</div>
 {% endblock %}

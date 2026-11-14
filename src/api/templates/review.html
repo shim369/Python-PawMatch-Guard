@@ -1,19 +1,41 @@
-{% extends "base.html" %}{% block body %}
-<h2>{{ t('review.title') }}</h2>
-{% if not posts %}<p class="muted">{{ t('review.empty') }}</p>{% endif %}
-<div class="grid">
-{% for p in posts %}
- <div class="card">
-  <img src="/review/media/{{ p.id }}" alt="{{ p.title }}">
-  <div><strong>{{ p.title }}</strong>
-   <p class="muted">{{ t('form.species') }}: {{ t(p.species) }} / {{ t('review.detected') }}: {{ t(p.detected_species) if p.detected_species else '-' }}</p>
-   <ul>{% for r in p.reason_text %}<li>{{ r }}</li>{% endfor %}</ul>
-   <form method="post" action="/review/{{ p.id }}">
-    <button name="decision" value="publish">{{ t('review.publish') }}</button>
-    <button name="decision" value="reject">{{ t('review.reject') }}</button>
-   </form>
+{% extends "base.html" %}{% from "_macros.html" import icon, species_label, REASON_STYLE with context %}
+{% block title %}{{ t('review.title') }}{% endblock %}
+{% block body %}
+<div class="page">
+  <div class="page-head">
+    <h1 style="font-size:clamp(1.8rem,3.6vw,2.6rem)">{{ t('review.title') }}</h1>
+    <p class="lead">{{ t('review.subtitle') }}</p>
   </div>
- </div>
-{% endfor %}
+  {% if not posts %}
+  <div class="empty panel">
+    <div class="art">{{ icon('check') }}</div>
+    <h3>{{ t('review.empty') }}</h3>
+    <p>{{ t('review.empty.hint') }}</p>
+  </div>
+  {% else %}
+  <div class="review-grid">
+  {% for p in posts %}
+    <article class="card">
+      <div class="media"><img src="/review/media/{{ p.id }}" alt="{{ p.title }}" loading="lazy">
+        {% if p.media_type == 'video' %}<div class="overlay"><span class="badge glass">{{ icon('video') }} {{ t('card.video') }}</span></div>{% endif %}</div>
+      <div class="body">
+        <h3>{{ p.title }}</h3>
+        <div class="compare">
+          <div><small>{{ t('post.posted_as') }}</small><b>{{ species_label(p.species) }}</b></div>
+          <div class="{{ 'differs' if p.detected_species and p.detected_species != p.species }}"><small>{{ t('post.detected_as') }}</small><b>{% if p.detected_species %}{{ species_label(p.detected_species) }}{% else %}–{% endif %}</b></div>
+        </div>
+        <ul class="reasons">
+          {% for code in p.reasons %}{% set st = REASON_STYLE.get(code, ('info','alert')) %}
+          <li><span class="badge {{ st[0] }}">{{ icon(st[1]) }} {{ p.reason_text[loop.index0] }}</span></li>{% endfor %}
+        </ul>
+        <form method="post" action="/review/{{ p.id }}" class="actions">
+          <button class="btn" name="decision" value="publish">{{ icon('check') }} {{ t('review.publish') }}</button>
+          <button class="btn danger" name="decision" value="reject">{{ icon('x-circle') }} {{ t('review.reject') }}</button>
+        </form>
+      </div>
+    </article>
+  {% endfor %}
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

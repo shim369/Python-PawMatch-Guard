@@ -1,14 +1,59 @@
-{% extends "base.html" %}{% block body %}
-<h2>{{ post.title }}</h2>
-<p><span class="badge">{{ t('status.' + post.status) }}</span></p>
-{% if post.status == 'pending' %}
- <p class="muted">{{ t('status.pending_hint') }}</p>
- <script>setTimeout(() => location.reload(), 2000)</script>
-{% endif %}
-{% if post.status == 'published' %}
- {% if post.media_type == 'video' %}<video src="/media/{{ post.id }}/video" controls poster="/media/{{ post.id }}" style="max-width:100%"></video>
- {% else %}<img src="/media/{{ post.id }}" style="max-width:100%">{% endif %}
-{% endif %}
-<p>{{ post.description }}</p>
-{% if post.reason_text %}<ul>{% for r in post.reason_text %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+{% extends "base.html" %}{% from "_macros.html" import icon, species_label, REASON_STYLE with context %}
+{% block title %}{{ post.title }}{% endblock %}
+{% block body %}
+{% set tone = {'published': 'ok', 'review': 'warn', 'rejected': 'bad', 'error': 'bad', 'pending': 'info'}[post.status] %}
+{% set glyph = {'published': 'check', 'review': 'user', 'rejected': 'x-circle', 'error': 'alert', 'pending': 'clock'}[post.status] %}
+<div class="page">
+  <p><a href="/">{{ icon('arrow-left') }} {{ t('post.back') }}</a></p>
+  <div class="two-col">
+    <div>
+      {% if post.status == 'published' %}
+      <div class="viewer">
+        {% if post.media_type == 'video' %}<video src="/media/{{ post.id }}/video" controls playsinline poster="/media/{{ post.id }}"></video>
+        {% else %}<img src="/media/{{ post.id }}" alt="{{ post.title }}">{% endif %}
+      </div>
+      {% else %}
+      <div class="panel empty" {% if post.status == 'pending' %}id="pending" data-id="{{ post.id }}"{% endif %}>
+        <div class="art">{{ icon(glyph) }}</div>
+        <h3>{{ t('status.' + post.status) }}</h3>
+        {% if post.status == 'pending' %}
+          <div class="progress" style="width:100%;max-width:360px" aria-live="polite">
+            <div class="bar"><i></i></div>
+            <ol class="timeline"><li class="done">{{ t('step.received') }}</li><li class="now">{{ t('step.checking') }}</li><li>{{ t('step.result') }}</li></ol>
+          </div>
+          <p>{{ t('status.pending_hint') }}</p>
+        {% else %}<p>{{ t('post.hidden') }}</p>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h1 style="font-size:clamp(1.5rem,3vw,2.1rem)">{{ post.title }}</h1>
+      <div class="status-hero {{ tone }}">
+        <span class="ico">{{ icon(glyph) }}</span>
+        <div><strong>{{ t('status.' + post.status) }}</strong><span>{{ t('status.' + post.status + '.text') }}</span></div>
+      </div>
+      {% if post.description %}<p style="margin:16px 0 0">{{ post.description }}</p>{% endif %}
+      <p style="margin:16px 0 0;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="badge">{{ t('post.posted_as') }}: {{ species_label(post.species) }}</span>
+        {% if post.detected_species %}<span class="badge {{ 'ok' if post.detected_species == post.species else 'warn' }}">{{ t('post.detected_as') }}: {{ species_label(post.detected_species) }}</span>{% endif %}
+        {% if post.media_type == 'video' %}<span class="badge">{{ icon('video') }} {{ t('card.video') }}</span>{% endif %}
+      </p>
+      {% if post.status != 'pending' %}
+      <h3 style="margin-top:26px">{{ t('post.checks') }}</h3>
+      <ul class="meta-list">
+        {% if not post.reasons %}
+        <li><span class="ico ok">{{ icon('check') }}</span><div><b>{{ t('checks.animal') }}</b><span>{{ t('checks.animal.text') }}</span></div></li>
+        <li><span class="ico ok">{{ icon('check') }}</span><div><b>{{ t('checks.species') }}</b><span>{{ t('checks.species.text') }}</span></div></li>
+        <li><span class="ico ok">{{ icon('check') }}</span><div><b>{{ t('checks.privacy') }}</b><span>{{ t('checks.privacy.text') }}</span></div></li>
+        {% endif %}
+        {% for code in post.reasons %}
+        {% set st = REASON_STYLE.get(code, ('info', 'alert')) %}
+        <li><span class="ico {{ st[0] }}">{{ icon(st[1]) }}</span><div><b>{{ post.reason_text[loop.index0] }}</b></div></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+</div>
 {% endblock %}

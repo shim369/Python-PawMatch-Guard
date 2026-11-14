@@ -1,28 +1,60 @@
-<!doctype html>
+{% from "_macros.html" import icon %}<!doctype html>
 <html lang="{{ lang }}">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ t('app.title') }}</title>
-<style>
- body{font-family:system-ui,sans-serif;margin:0;color:#222;background:#faf8f5}
- header{background:#2d4a3e;color:#fff;padding:.7rem 1rem;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
- header a{color:#fff;text-decoration:none} header .sp{flex:1}
- main{max-width:960px;margin:1rem auto;padding:0 1rem}
- .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
- .card{background:#fff;border:1px solid #e3ddd3;border-radius:8px;overflow:hidden}
- .card img{width:100%;height:160px;object-fit:cover;display:block}
- .card div{padding:.6rem} .muted{color:#777;font-size:.85rem}
- input,select,textarea,button{font:inherit;padding:.4rem;margin:.2rem 0}
- label{display:block;margin-top:.6rem} button{cursor:pointer}
- .badge{display:inline-block;padding:.1rem .5rem;border-radius:99px;font-size:.8rem;background:#eee}
-</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{% block title %}{{ t('app.title') }}{% endblock %} · PawMatch Guard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232c5a47'/%3E%3Cg fill='white'%3E%3Ccircle cx='7' cy='11' r='1.8'/%3E%3Ccircle cx='10' cy='7' r='1.8'/%3E%3Ccircle cx='14' cy='7' r='1.8'/%3E%3Ccircle cx='17' cy='11' r='1.8'/%3E%3Cpath d='M12 11c-2.6 0-5 2.8-5 5 0 1.6 1.3 2.5 2.4 2.5 1 0 1.6-.5 2.6-.5s1.6.5 2.6.5c1.1 0 2.4-.9 2.4-2.5 0-2.2-2.4-5-5-5z'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/style.css?v={{ asset_v }}">
+<script>try{var s=localStorage.getItem("theme");if(s)document.documentElement.setAttribute("data-theme",s)}catch(e){}</script>
 </head>
 <body>
-<header>
- <strong>🐾 {{ t('app.title') }}</strong>
- <a href="/">{{ t('nav.home') }}</a><a href="/submit">{{ t('nav.submit') }}</a>
- <a href="/review">{{ t('nav.review') }}</a><span class="sp"></span>
- {% for l in langs %}<a href="?lang={{ l }}">{{ l|upper }}</a>{% endfor %}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+ <symbol id="i-paw" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="5.5" cy="11" r="2.2"/><circle cx="9.5" cy="6" r="2.2"/><circle cx="14.5" cy="6" r="2.2"/><circle cx="18.5" cy="11" r="2.2"/><path d="M12 11c-3 0-6 3.4-6 6 0 2 1.6 3 3 3 1.2 0 1.8-.6 3-.6s1.8.6 3 .6c1.4 0 3-1 3-3 0-2.6-3-6-6-6z"/></g></symbol>
+ <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></symbol>
+ <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></symbol>
+ <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19L12 3.5z"/><path d="M12 10v4M12 17.3v.01"/></symbol>
+ <symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+ <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5l5-2.5v8l-5-2.5"/></symbol>
+ <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 13.2A8.5 8.5 0 1110.8 3.5a6.8 6.8 0 009.7 9.7z"/></symbol>
+ <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.7-3.3 7.7-8 9-4.7-1.3-8-4.3-8-9V6l8-3z"/><path d="M8.5 12l2.5 2.5 4.5-4.5"/></symbol>
+ <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+ <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></symbol>
+ <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5m0 0l6-6m-6 6l6 6"/></symbol>
+ <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+</defs></svg>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="{{ t('app.title') }}">
+      <span class="brand-mark">{{ icon('paw', 'i') }}</span>
+      <span>PawMatch<small>Guard</small></span>
+    </a>
+    <nav class="main" aria-label="Main">
+      <a href="/" {% if active == 'home' %}aria-current="page"{% endif %}>{{ icon('search') }} {{ t('nav.home') }}</a>
+      <a href="/submit" {% if active == 'submit' %}aria-current="page"{% endif %}>{{ icon('upload') }} {{ t('nav.submit') }}</a>
+      <a href="/review" {% if active == 'review' %}aria-current="page"{% endif %}>{{ icon('shield') }} {{ t('nav.review') }}
+        {% if review_count %}<span class="count-pill" aria-label="{{ t('review.count', n=review_count) }}">{{ review_count }}</span>{% endif %}</a>
+    </nav>
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Language">
+        {% for l in langs %}<a href="?lang={{ l }}" hreflang="{{ l }}" {% if l == lang %}aria-current="true"{% endif %}>{{ l|upper }}</a>{% endfor %}
+      </div>
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="{{ t('theme.toggle') }}" title="{{ t('theme.toggle') }}">{{ icon('moon') }}</button>
+    </div>
+  </div>
 </header>
-<main>{% block body %}{% endblock %}</main>
-</body></html>
+
+<main class="wrap">{% block body %}{% endblock %}</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>{{ t('footer.note') }}</span>
+    <span>© PawMatch Guard</span>
+  </div>
+</footer>
+<script src="/static/app.js?v={{ asset_v }}" defer></script>
+</body>
+</html>

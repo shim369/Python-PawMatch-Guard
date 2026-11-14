@@ -1,0 +1,28 @@
+{% macro icon(name, cls="i") -%}
+<svg class="{{ cls }}" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-{{ name }}"/></svg>
+{%- endmacro %}
+
+{% macro species_label(code) -%}{{ '🐱' if code == 'cat' else '🐶' }} {{ t(code) }}{%- endmacro %}
+
+{% macro card(p) %}
+<a class="card" href="/post/{{ p.id }}">
+  <div class="media">
+    <img src="/media/{{ p.id }}" alt="{{ p.title }}" loading="lazy">
+    <div class="overlay">
+      <span class="badge glass">{{ species_label(p.detected_species or p.species) }}</span>
+      {% if p.media_type == 'video' %}<span class="badge glass">{{ icon('video') }} {{ t('card.video') }}</span>{% endif %}
+    </div>
+  </div>
+  <div class="body">
+    <h3>{{ p.title }}</h3>
+    {% if p.description %}<p>{{ p.description }}</p>{% endif %}
+  </div>
+</a>
+{% endmacro %}
+
+{# icon + tone for each moderation reason code #}
+{% set REASON_STYLE = {
+  'no_animal': ('bad', 'x-circle'), 'uncertain_animal': ('warn', 'alert'),
+  'pii_blurred': ('info', 'eye'), 'pii_low_confidence': ('warn', 'alert'),
+  'species_mismatch': ('warn', 'alert'), 'video_pii_unblurred': ('warn', 'alert'),
+  'processing_failed': ('bad', 'x-circle') } %}
