@@ -56,3 +56,21 @@ class PetDetectionDataset(Dataset):
             "labels": torch.full((len(boxes),), ANIMAL_HEAD, dtype=torch.int64),
         }
         return x, target
+
+
+class NegativeDetectionDataset(Dataset):
+    """Photos without any animal: an image with an empty target (all background)."""
+
+    def __init__(self, paths: list[Path], train: bool = False) -> None:
+        self.paths, self.train = paths, train
+
+    def __len__(self) -> int:
+        return len(self.paths)
+
+    def __getitem__(self, i: int):
+        img = Image.open(self.paths[i]).convert("RGB")
+        x = torch.from_numpy(np.asarray(img).copy()).permute(2, 0, 1).float() / 255.0
+        if self.train and random.random() < 0.5:
+            x = x.flip(-1)
+        return x, {"boxes": torch.zeros((0, 4), dtype=torch.float32),
+                   "labels": torch.zeros((0,), dtype=torch.int64)}

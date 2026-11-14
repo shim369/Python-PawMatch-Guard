@@ -10,14 +10,20 @@ from pathlib import Path
 import numpy as np
 import torch
 import yaml
-from torch.utils.data import DataLoader
+from torch.utils.data import ConcatDataset, DataLoader
 from torchvision.models.detection import (
     FasterRCNN_MobileNet_V3_Large_FPN_Weights,
     fasterrcnn_mobilenet_v3_large_fpn,
 )
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
-from src.data.detection import ANIMAL_HEAD, PetDetectionDataset, with_boxes
+from src.data.detection import (
+    ANIMAL_HEAD,
+    NegativeDetectionDataset,
+    PetDetectionDataset,
+    with_boxes,
+)
+from src.data.negatives import read_negatives_split
 from src.data.oxford_pet import DATASET_DIR
 from src.data.split import read_split_csv
 from src.metrics.detection import ImageDetections, average_precision, class_recall, mean_ap
@@ -73,8 +79,17 @@ def run(config_path: Path) -> Path:
     print("images with boxes:", sizes, flush=True)
     kw = {"batch_size": cfg["batch_size"], "num_workers": cfg["num_workers"],
           "collate_fn": collate}
-    train_loader = DataLoader(PetDetectionDataset(splits["train"], root, train=True),
-                              shuffle=True, **kw)
+    train_ds = PetDetectionDataset(splits["train"], root, train=True)
+    neg_cfg = cfg.get("negatives")
+    if neg_cfg:  # photos without animals, as all-background images (train half only)
+        ids = read_negatives_split(Path(neg_cfg["split_csv"]))["train"]
+        paths = [Path(neg_cfg["images_dir"]) / f"{i}.jpg" for i in ids]
+        repeat = int(neg_cfg.get("repeat", 1))
+        negs = [NegativeDetectionDataset(paths, train=True) for _ in range(repeat)]
+        train_ds = ConcatDataset([train_ds, *negs])
+        sizes["train_negatives"] = len(paths) * repeat
+        print("training negatives:", len(paths), "x", repeat, flush=True)
+    train_loader = DataLoader(train_ds, shuffle=True, **kw)
     val_loader = DataLoader(PetDetectionDataset(splits["val"], root), **kw)
     test_loader = DataLoader(PetDetectionDataset(splits["test"], root), **kw)
 
