@@ -56,3 +56,14 @@ testpaths = ["tests"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.File", "fastapi.Form"]
+
+# On Linux (Docker, Lambda) take CPU-only PyTorch: the default wheels drag in ~3 GB of CUDA
+# libraries. macOS keeps using PyPI (Apple GPU / CPU).
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

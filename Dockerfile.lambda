@@ -6,7 +6,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR ${LAMBDA_TASK_ROOT}
 COPY pyproject.toml uv.lock README.md ./
 RUN uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt \
-    && uv pip install --system --no-cache -r /tmp/requirements.txt
+    && uv pip install --system --no-cache -r /tmp/requirements.txt \
+       --extra-index-url https://download.pytorch.org/whl/cpu --index-strategy unsafe-best-match
 COPY src ./src
 COPY configs ./configs
 CMD ["src.aws_lambda.handler"]
